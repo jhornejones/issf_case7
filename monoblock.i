@@ -17,12 +17,53 @@
 # as well as the x, y, z components), and von mises stress.
 
 #-------------------------------------------------------------------------
-# PARAMETER DEFINITIONS 
+# DYNAMIC PARAMETER DEFINITIONS
+# *_*START*_*
+
+# Boundary conditions
+coolantTemp=150       # degC
+convectionHTC=150000  # W/m^2K
+
+topSurfHeatFlux=2e7   # W/m^2
+
+sideSurfHeatFlux=2e8  # W/m^2
+protrusion=0.000      # m - the distance monoblock protrudes past neighbour
+
+coolantPressure=5e6   # Pa
+
+# Material Properties
+scale_therm_exp_CuCrZr=1.0
+scale_therm_exp_Cu=1.0
+scale_therm_exp_W=1.0
+
+scale_therm_cond_CuCrZr=1.0
+scale_therm_cond_Cu=1.0
+scale_therm_cond_W=1.0
+
+scale_density_CuCrZr=1.0
+scale_density_Cu=1.0
+scale_density_W=1.0
+
+scale_youngs_CuCrZr=1.0
+scale_youngs_Cu=1.0
+scale_youngs_W=1.0
+
+scale_spec_heat_CuCrZr=1.0
+scale_spec_heat_Cu=1.0
+scale_spec_heat_W=1.0
+
+scale_poisson_CuCrZr=1.0
+scale_poisson_Cu=1.0
+scale_poisson_W=1.0
+
+# *_*END*_*
+
+#-------------------------------------------------------------------------
+# STATIC PARAMETER DEFINITIONS
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # File handling
 name=monoblock
-outputDir=outputs
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Geometry
@@ -39,13 +80,13 @@ intLayerExtDiam=${fparse intLayerIntDiam + 2*intLayerThick}
 monoBThick=3e-3      # m
 monoBWidth=${fparse intLayerExtDiam + 2*monoBThick}
 monoBArmHeight=8e-3  # m
-monoBDepth=12e-3     # m
+monoBDepth=6e-3      # m
 
 pipeIntCirc=${fparse PI * pipeIntDiam}
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Mesh Sizing
-meshRefFact=1
+meshRefFact=1.5
 meshDens=1e3 # divisions per metre (nominal)
 
 # Mesh Order
@@ -89,8 +130,7 @@ ctol=${fparse pipeIntCirc / (8 * 4 * pipeCircSectDivs)}
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Loads and BCs
 stressFreeTemp=20   # degC
-coolantTemp=150     # degC
-surfHeatFlux=10e6   # W/m^2
+sideFluxStepHeight=${fparse monoBWidth / 2 + monoBArmHeight - protrusion}
 
 #-------------------------------------------------------------------------
 
@@ -261,80 +301,101 @@ surfHeatFlux=10e6   # W/m^2
     type = PiecewiseLinear
     data_file = ./data/cucrzr_cte.csv
     format = columns
+    scale_factor = ${scale_therm_exp_CuCrZr}
   []
   [copper_thermal_expansion_func]
     type = PiecewiseLinear
     data_file = ./data/copper_cte.csv
     format = columns
+    scale_factor = ${scale_therm_exp_Cu}
   []
   [tungsten_thermal_expansion_func]
     type = PiecewiseLinear
     data_file = ./data/tungsten_cte.csv
     format = columns
+    scale_factor = ${scale_therm_exp_W}
   []
 
   [cucrzr_thermal_conductivity_func]
     type = PiecewiseLinear
     data_file = ./data/cucrzr_conductivity.csv
     format = columns
+    scale_factor = ${scale_therm_cond_CuCrZr}
   []
   [copper_thermal_conductivity_func]
     type = PiecewiseLinear
     data_file = ./data/copper_conductivity.csv
     format = columns
+    scale_factor = ${scale_therm_cond_Cu}
   []
   [tungsten_thermal_conductivity_func]
     type = PiecewiseLinear
     data_file = ./data/tungsten_conductivity.csv
     format = columns
+    scale_factor = ${scale_therm_cond_W}
   []
 
   [cucrzr_density_func]
     type = PiecewiseLinear
     data_file = ./data/cucrzr_density.csv
     format = columns
+    scale_factor = ${scale_density_CuCrZr}
   []
   [copper_density_func]
     type = PiecewiseLinear
     data_file = ./data/copper_density.csv
     format = columns
+    scale_factor = ${scale_density_Cu}
   []
   [tungsten_density_func]
     type = PiecewiseLinear
     data_file = ./data/tungsten_density.csv
     format = columns
+    scale_factor = ${scale_density_W}
   []
 
   [cucrzr_elastic_modulus_func]
     type = PiecewiseLinear
     data_file = ./data/cucrzr_elastic_modulus.csv
     format = columns
+    scale_factor = ${scale_youngs_CuCrZr}
   []
   [copper_elastic_modulus_func]
     type = PiecewiseLinear
     data_file = ./data/copper_elastic_modulus.csv
     format = columns
+    scale_factor = ${scale_youngs_Cu}
   []
   [tungsten_elastic_modulus_func]
     type = PiecewiseLinear
     data_file = ./data/tungsten_elastic_modulus.csv
     format = columns
+    scale_factor = ${scale_youngs_W}
   []
 
   [cucrzr_specific_heat_func]
     type = PiecewiseLinear
     data_file = ./data/cucrzr_specific_heat.csv
     format = columns
+    scale_factor = ${scale_spec_heat_CuCrZr}
   []
   [copper_specific_heat_func]
     type = PiecewiseLinear
     data_file = ./data/copper_specific_heat.csv
     format = columns
+    scale_factor = ${scale_spec_heat_Cu}
   []
   [tungsten_specific_heat_func]
     type = PiecewiseLinear
     data_file = ./data/tungsten_specific_heat.csv
     format = columns
+    scale_factor = ${scale_spec_heat_W}
+  []
+  [side_heat_flux_func]
+    type = ParsedFunction
+    expression = a/(1+exp(-1e10*(y-b)))
+    symbol_names = 'a b'
+    symbol_values = '${fparse sideSurfHeatFlux} ${fparse sideFluxStepHeight}'
   []
 []
 
@@ -431,21 +492,21 @@ surfHeatFlux=10e6   # W/m^2
     type = ComputeVariableIsotropicElasticityTensor
     args = temperature
     youngs_modulus = elastic_modulus
-    poissons_ratio = 0.33
+    poissons_ratio = '${fparse 0.33*scale_poisson_CuCrZr}'
     block = 'pipe'
   []
   [copper_elasticity]
     type = ComputeVariableIsotropicElasticityTensor
     args = temperature
     youngs_modulus = elastic_modulus
-    poissons_ratio = 0.33
+    poissons_ratio = '${fparse 0.33*scale_poisson_Cu}'
     block = 'interlayer'
   []
   [tungsten_elasticity]
     type = ComputeVariableIsotropicElasticityTensor
     args = temperature
     youngs_modulus = elastic_modulus
-    poissons_ratio = 0.29
+    poissons_ratio = '${fparse 0.29*scale_poisson_W}'
     block = 'armour'
   []
 
@@ -478,35 +539,45 @@ surfHeatFlux=10e6   # W/m^2
     type = ComputeFiniteStrainElasticStress
   []
 
-  [coolant_heat_transfer_coefficient]
-    type = PiecewiseLinearInterpolationMaterial
-    xy_data = '
-      1 4
-      100 109.1e3
-      150 115.9e3
-      200 121.01e3
-      250 128.8e3
-      295 208.2e3
-    '
-    variable = temperature
-    property = heat_transfer_coefficient
-    boundary = 'internal_boundary'
-  []
 []
 
 [BCs]
-  [heat_flux_in]
+  [heat_flux_in_top]
     type = NeumannBC
     variable = temperature
     boundary = 'top'
-    value = ${surfHeatFlux}
+    value = ${topSurfHeatFlux}
+  []
+  [heat_flux_in_left]
+    type = FunctionNeumannBC
+    variable = temperature
+    boundary = 'left'
+    function = side_heat_flux_func
+  []
+  [heat_flux_in_right]
+    type = FunctionNeumannBC
+    variable = temperature
+    boundary = 'right'
+    function = side_heat_flux_func
   []
   [heat_flux_out]
     type = ConvectiveHeatFluxBC
     variable = temperature
     boundary = 'internal_boundary'
     T_infinity = ${coolantTemp}
-    heat_transfer_coefficient = heat_transfer_coefficient
+    heat_transfer_coefficient = ${convectionHTC}
+  []
+  [coolant_pressure_x]
+    type = Pressure
+    variable = disp_x
+    boundary = 'internal_boundary'
+    factor = ${coolantPressure}
+  []
+  [coolant_pressure_y]
+    type = Pressure
+    variable = disp_y
+    boundary = 'internal_boundary'
+    factor = ${coolantPressure}
   []
   [fixed_x]
     type = DirichletBC
@@ -543,9 +614,17 @@ surfHeatFlux=10e6   # W/m^2
 []
 
 [Postprocessors]
-  [max_stress]
+  [stress_max]
     type = ElementExtremeValue
     variable = vonmises_stress
+  []
+  [temp_max]
+      type = NodalExtremeValue
+      variable = temperature
+  []
+  [temp_avg]
+      type = AverageNodalVariableValue
+      variable = temperature
   []
 []
 
@@ -553,7 +632,7 @@ surfHeatFlux=10e6   # W/m^2
   exodus = true
   [write_to_file]
     type = CSV
-    show = 'max_stress'
-    file_base = '${outputDir}/${name}_out'
+    show = 'stress_max temp_max temp_avg'
+    file_base = '${name}_out'
   []
 []
