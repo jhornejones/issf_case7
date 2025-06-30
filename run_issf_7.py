@@ -11,8 +11,8 @@ if __name__ == '__main__':
     #------------------------- USER INPUT ------------------------------------
     
     # MOOSE setup
-    execPathStr = "/home/jhorne/projects/proteus/proteus-opt"   # Path to MOOSE executable
-    nTasks = 16                                                 # Number of cores to use
+    execPathStr = "/home/jhorne/projects/proteus/proteus-opt"   # ABSOLUTE Linux path to MOOSE executable
+    nTasks = 16                 # Number of cores to use
     
     # Input parameter reading - OPTIONAL
     inputJsonPathStr = None     # Either a path to a json file containing input parameters to update or None
