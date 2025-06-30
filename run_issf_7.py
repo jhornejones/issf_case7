@@ -17,7 +17,7 @@ if __name__ == '__main__':
     convectionHTC=150000        # W/m^2K
     topSurfHeatFlux=2e7         # W/m^2
     sideSurfHeatFlux=2e8        # W/m^2
-    protrusion=0.001            # m - the distance monoblock protrudes past neighbour
+    protrusion=0.000            # m - the distance monoblock protrudes past neighbour
     coolantPressure=5e6         # Pa
 
     scale_therm_exp_CuCrZr=1.0
