@@ -1,7 +1,9 @@
 from moose_wrapper import *
+import json
 
 INPUT_FILE = "monoblock.i"
-OUTPUT_FILE = "monoblock_out.csv"
+SIM_OUTPUT_FILE = "monoblock_out.csv"
+PARAM_OUTPUT_FILE = "results.json"
 OTHER_DATA = ["data"]
 
 if __name__ == '__main__':
@@ -11,6 +13,9 @@ if __name__ == '__main__':
     # MOOSE setup
     execPathStr = "/home/jhorne/projects/proteus/proteus-opt"   # Path to MOOSE executable
     nTasks = 16                                                 # Number of cores to use
+    
+    # Input parameter reading - OPTIONAL
+    inputJsonPathStr = None     # Either a path to a json file containing input parameters to update or None
     
     # Input parameters
     coolantTemp=155             # degC
@@ -23,52 +28,45 @@ if __name__ == '__main__':
     scale_therm_exp_CuCrZr=1.0
     scale_therm_exp_Cu=1.0
     scale_therm_exp_W=1.0
-
-    scale_therm_cond_CuCrZr=1.0
-    scale_therm_cond_Cu=1.0
-    scale_therm_cond_W=1.0
-
-    scale_density_CuCrZr=1.0
-    scale_density_Cu=1.0
-    scale_density_W=1.0
-
-    scale_youngs_CuCrZr=1.0
-    scale_youngs_Cu=1.0
-    scale_youngs_W=1.0
-
-    scale_spec_heat_CuCrZr=1.0
-    scale_spec_heat_Cu=1.0
-    scale_spec_heat_W=1.0
-
-    scale_poisson_CuCrZr=1.0
-    scale_poisson_Cu=1.0
-    scale_poisson_W=1.0
     
     #------------------------- END -------------------------------------------
     #-------------------------------------------------------------------------
     
-    params = {
-        'coolantTemp':              coolantTemp,
-        'convectionHTC':            convectionHTC,
-        'topSurfHeatFlux':          topSurfHeatFlux,
-        'sideSurfHeatFlux':         sideSurfHeatFlux,
-        'coolantPressure':          coolantPressure,
-        'protrusion':               protrusion,
-        'scale_therm_cond_W':       scale_therm_cond_W,
-        'scale_youngs_CuCrZr':      scale_youngs_CuCrZr,
-    }
+    if inputJsonPathStr is None:
+        params = {
+            'coolantTemp':              coolantTemp,
+            'convectionHTC':            convectionHTC,
+            'topSurfHeatFlux':          topSurfHeatFlux,
+            'sideSurfHeatFlux':         sideSurfHeatFlux,
+            'coolantPressure':          coolantPressure,
+            'protrusion':               protrusion,
+            'scale_therm_cond_W':       scale_therm_cond_W,
+            'scale_youngs_CuCrZr':      scale_youngs_CuCrZr,
+        }
+    else:
+        jsonPath = Path(inputJsonPathStr)
+        if jsonPath.exists():
+            with open(jsonPath, 'r') as fp:
+                params = json.load(fp)
+        else:
+            raise FileExistsError("Input parameter JSON file does not exist")
     
+    # Setup and run MOOSE simulation
     sim = MooseSim(
         inputFile=INPUT_FILE,
-        outputFile=OUTPUT_FILE,
+        outputFile=SIM_OUTPUT_FILE,
         execPathStr=execPathStr,
         otherData=OTHER_DATA
     )
     
     sim.updateInputFile(params)
-    
-    sim.runSimulation(nTasks)
-    
+    sim.runSimulation(nTasks) 
     results = sim.collectSteadyStateOutputs()
     
-    print(results)
+    # Make results available
+    with open(Path(PARAM_OUTPUT_FILE), 'w') as fp:
+        json.dump(results, fp)
+    
+    temp_max = results['temp_max']
+    temp_avg = results['temp_avg']
+    stress_max = results['stress_max']
