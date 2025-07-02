@@ -80,7 +80,7 @@ intLayerExtDiam=${fparse intLayerIntDiam + 2*intLayerThick}
 monoBThick=3e-3      # m
 monoBWidth=${fparse intLayerExtDiam + 2*monoBThick}
 monoBArmHeight=8e-3  # m
-monoBDepth=6e-3      # m
+monoBDepth=12e-3      # m
 
 pipeIntCirc=${fparse PI * pipeIntDiam}
 
@@ -266,6 +266,17 @@ sideFluxStepHeight=${fparse monoBWidth / 2 + monoBArmHeight - protrusion}
                  ${fparse (monoBDepth/2)+tol}'
     new_boundary = right_x_bottom_y_centre_z
   []
+#  [name_centre_symmetric_plane]
+#    type = SubdomainBoundingBoxGenerator
+#    input = name_node_right_x_bottom_y_centre_z
+#    bottom_left = '${fparse (monoBWidth/-2)-ctol}
+#                   ${fparse (monoBWidth/-2)-ctol}
+#                   ${fparse -tol}'
+#    top_right = '${fparse (monoBWidth/2)+ctol}
+#                 ${fparse (monoBWidth/2)+monoBArmHeight+ctol}
+#                 ${fparse tol}'
+#    new_boundary = centre_symmetric_plane
+#  []
 []
 
 [Variables]
@@ -283,9 +294,9 @@ sideFluxStepHeight=${fparse monoBWidth / 2 + monoBArmHeight - protrusion}
   []
 []
 
-[Modules]
-  [TensorMechanics]
-    [Master]
+[Physics]
+  [SolidMechanics]
+    [QuasiStatic]
       [all]
         add_variables = true
         strain = FINITE
