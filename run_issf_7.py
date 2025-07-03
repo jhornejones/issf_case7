@@ -56,7 +56,7 @@ if __name__ == '__main__':
     # Parse arguements if they exist (allows call from Windows)
     if len(sys.argv) > 1:
         if len(sys.argv) != 4:
-            raise ValueError("Invalid number of command line arguements")
+            raise ValueError("Invalid number of command line arguments")
         else:
             execPathStr = sys.argv[1]
             

@@ -218,13 +218,22 @@ sideFluxStepHeight=${fparse monoBWidth / 2 + monoBArmHeight - protrusion}
     type = AdvancedExtruderGenerator
     input = merge_boundary_names
     direction = '0 0 1'
-    heights = ${monoBDepth}
-    num_layers = ${extrudeDivs}
+    heights = '${fparse monoBDepth/2}'
+    num_layers = '${fparse extrudeDivs/2}'
+  []
+
+  [change_back_boundary_name]
+    type = RenameBoundaryGenerator
+    input = extrude
+    old_boundary = '15006
+                    1005'
+    new_boundary = 'back
+                    braze'
   []
 
   [name_node_centre_x_bottom_y_back_z]
     type = BoundingBoxNodeSetGenerator
-    input = extrude
+    input = change_back_boundary_name
     bottom_left = '${fparse -ctol}
                    ${fparse (monoBWidth/-2)-ctol}
                    ${fparse -tol}'
@@ -233,50 +242,6 @@ sideFluxStepHeight=${fparse monoBWidth / 2 + monoBArmHeight - protrusion}
                  ${fparse tol}'
     new_boundary = centre_x_bottom_y_back_z
   []
-  [name_node_centre_x_bottom_y_front_z]
-    type = BoundingBoxNodeSetGenerator
-    input = name_node_centre_x_bottom_y_back_z
-    bottom_left = '${fparse -ctol}
-                   ${fparse (monoBWidth/-2)-ctol}
-                   ${fparse monoBDepth-tol}'
-    top_right = '${fparse ctol}
-                 ${fparse (monoBWidth/-2)+ctol}
-                 ${fparse monoBDepth+tol}'
-    new_boundary = centre_x_bottom_y_front_z
-  []
-  [name_node_left_x_bottom_y_centre_z]
-    type = BoundingBoxNodeSetGenerator
-    input = name_node_centre_x_bottom_y_front_z
-    bottom_left = '${fparse (monoBWidth/-2)-ctol}
-                   ${fparse (monoBWidth/-2)-ctol}
-                   ${fparse (monoBDepth/2)-tol}'
-    top_right = '${fparse (monoBWidth/-2)+ctol}
-                 ${fparse (monoBWidth/-2)+ctol}
-                 ${fparse (monoBDepth/2)+tol}'
-    new_boundary = left_x_bottom_y_centre_z
-  []
-  [name_node_right_x_bottom_y_centre_z]
-    type = BoundingBoxNodeSetGenerator
-    input = name_node_left_x_bottom_y_centre_z
-    bottom_left = '${fparse (monoBWidth/2)-ctol}
-                   ${fparse (monoBWidth/-2)-ctol}
-                   ${fparse (monoBDepth/2)-tol}'
-    top_right = '${fparse (monoBWidth/2)+ctol}
-                 ${fparse (monoBWidth/-2)+ctol}
-                 ${fparse (monoBDepth/2)+tol}'
-    new_boundary = right_x_bottom_y_centre_z
-  []
-#  [name_centre_symmetric_plane]
-#    type = SubdomainBoundingBoxGenerator
-#    input = name_node_right_x_bottom_y_centre_z
-#    bottom_left = '${fparse (monoBWidth/-2)-ctol}
-#                   ${fparse (monoBWidth/-2)-ctol}
-#                   ${fparse -tol}'
-#    top_right = '${fparse (monoBWidth/2)+ctol}
-#                 ${fparse (monoBWidth/2)+monoBArmHeight+ctol}
-#                 ${fparse tol}'
-#    new_boundary = centre_symmetric_plane
-#  []
 []
 
 [Variables]
@@ -593,7 +558,7 @@ sideFluxStepHeight=${fparse monoBWidth / 2 + monoBArmHeight - protrusion}
   [fixed_x]
     type = DirichletBC
     variable = disp_x
-    boundary = 'centre_x_bottom_y_back_z centre_x_bottom_y_front_z'
+    boundary = 'centre_x_bottom_y_back_z'
     value = 0
   []
   [fixed_y]
@@ -605,7 +570,13 @@ sideFluxStepHeight=${fparse monoBWidth / 2 + monoBArmHeight - protrusion}
   [fixed_z]
     type = DirichletBC
     variable = disp_z
-    boundary = 'left_x_bottom_y_centre_z right_x_bottom_y_centre_z'
+    boundary = 'back'
+    value = 0
+  []
+  [temperature_symmetry]
+    type = NeumannBC
+    variable = temperature
+    boundary = 'back'
     value = 0
   []
 []
