@@ -1,5 +1,6 @@
 from moose_wrapper import *
 import json
+import sys
 
 INPUT_FILE = "monoblock.i"
 SIM_OUTPUT_FILE = "monoblock_out.csv"
@@ -52,6 +53,18 @@ if __name__ == '__main__':
     #------------------------- END -------------------------------------------
     #-------------------------------------------------------------------------
     
+    # Parse arguements if they exist (allows call from Windows)
+    if len(sys.argv) > 1:
+        if len(sys.argv) != 4:
+            raise ValueError("Invalid number of command line arguements")
+        else:
+            execPathStr = sys.argv[1]
+            
+            if sys.argv[2].isnumeric():
+                nTasks = int(sys.argv[2])
+            
+            inputJsonPathStr = sys.argv[3]
+    
     if inputJsonPathStr is None:
         params = {
             'coolantTemp':              coolantTemp,
@@ -60,8 +73,24 @@ if __name__ == '__main__':
             'sideSurfHeatFlux':         sideSurfHeatFlux,
             'coolantPressure':          coolantPressure,
             'protrusion':               protrusion,
+            'scale_therm_exp_CuCrZr':   scale_therm_exp_CuCrZr,
+            'scale_therm_exp_Cu':       scale_therm_exp_Cu,
+            'scale_therm_exp_W':        scale_therm_exp_W,
+            'scale_therm_cond_CuCrZr':  scale_therm_cond_CuCrZr,
+            'scale_therm_cond_Cu':      scale_therm_cond_Cu,
             'scale_therm_cond_W':       scale_therm_cond_W,
+            'scale_spec_heat_CuCrZr':   scale_spec_heat_CuCrZr,
+            'scale_spec_heat_Cu':       scale_spec_heat_Cu,
+            'scale_spec_heat_W':        scale_spec_heat_W,
+            'scale_density_CuCrZr':     scale_density_CuCrZr,
+            'scale_density_Cu':         scale_density_Cu,
+            'scale_density_W':          scale_density_W,
             'scale_youngs_CuCrZr':      scale_youngs_CuCrZr,
+            'scale_youngs_Cu':          scale_youngs_Cu,
+            'scale_youngs_W':           scale_youngs_W,
+            'scale_poisson_CuCrZr':     scale_poisson_CuCrZr,
+            'scale_poisson_Cu':         scale_poisson_Cu,
+            'scale_poisson_W':          scale_poisson_W
         }
     else:
         jsonPath = Path(inputJsonPathStr)
