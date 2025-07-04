@@ -222,7 +222,7 @@ sideFluxStepHeight=${fparse monoBWidth / 2 + monoBArmHeight - protrusion}
     num_layers = '${fparse extrudeDivs/2}'
   []
 
-  [change_back_boundary_name]
+  [change_boundary_names]
     type = RenameBoundaryGenerator
     input = extrude
     old_boundary = '15006
@@ -231,9 +231,15 @@ sideFluxStepHeight=${fparse monoBWidth / 2 + monoBArmHeight - protrusion}
                     braze'
   []
 
+  [split_back_boundary]
+    type = BreakBoundaryOnSubdomainGenerator
+    input = change_boundary_names
+    boundaries = 'back'
+  []
+
   [name_node_centre_x_bottom_y_back_z]
     type = BoundingBoxNodeSetGenerator
-    input = change_back_boundary_name
+    input = split_back_boundary
     bottom_left = '${fparse -ctol}
                    ${fparse (monoBWidth/-2)-ctol}
                    ${fparse -tol}'
@@ -266,7 +272,7 @@ sideFluxStepHeight=${fparse monoBWidth / 2 + monoBArmHeight - protrusion}
         add_variables = true
         strain = FINITE
         automatic_eigenstrain_names = true
-        generate_output = 'vonmises_stress'
+        generate_output = 'vonmises_stress maxshear_stress'
       []
     []
   []
@@ -570,13 +576,13 @@ sideFluxStepHeight=${fparse monoBWidth / 2 + monoBArmHeight - protrusion}
   [fixed_z]
     type = DirichletBC
     variable = disp_z
-    boundary = 'back'
+    boundary = 'back_to_armour back_to_interlayer back_to_pipe'
     value = 0
   []
   [temperature_symmetry]
     type = NeumannBC
     variable = temperature
-    boundary = 'back'
+    boundary = 'back_to_armour back_to_interlayer back_to_pipe'
     value = 0
   []
 []
@@ -596,17 +602,30 @@ sideFluxStepHeight=${fparse monoBWidth / 2 + monoBArmHeight - protrusion}
 []
 
 [Postprocessors]
-  [stress_max]
-    type = ElementExtremeValue
+  [stress_max_W]
+    type = SideExtremeValue
+    boundary = 'back_to_armour'
     variable = vonmises_stress
   []
-  [temp_max]
+  [stress_max_Cu]
+    type = SideExtremeValue
+    boundary = 'back_to_interlayer'
+    variable = vonmises_stress
+  []
+  [normal_stress_max_W_Cu]
+    type = SideExtremeValue
+    boundary = 'braze'
+    variable = vonmises_stress  # CHANGE ME!!!!!
+  []
+  [shear_stress_max_W_Cu]
+    type = SideExtremeValue
+    boundary = 'braze'
+    variable = maxshear_stress
+  []
+  [temp_max_W]
       type = NodalExtremeValue
       variable = temperature
-  []
-  [temp_avg]
-      type = AverageNodalVariableValue
-      variable = temperature
+      block = 'armour'
   []
 []
 
@@ -614,7 +633,7 @@ sideFluxStepHeight=${fparse monoBWidth / 2 + monoBArmHeight - protrusion}
   exodus = true
   [write_to_file]
     type = CSV
-    show = 'stress_max temp_max temp_avg'
+    show = 'temp_max_W stress_max_W stress_max_Cu normal_stress_max_W_Cu shear_stress_max_W_Cu'
     file_base = '${name}_out'
   []
 []

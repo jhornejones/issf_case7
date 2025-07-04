@@ -105,7 +105,20 @@ if not vEnvDirectory is None:
     command = command + f"source {vEnvDirectory}/bin/activate && "
 
 command = command + f"python run_issf_7.py {execPathStr} {nTasks} {DEFAULT_PARAM_JSON} && "
-
 command = command + f"cp {PARAM_OUTPUT_FILE} $(wslpath \'{Path(PARAM_OUTPUT_FILE).resolve()}\')\""
 
 subprocess.run(command)
+
+# Make results available
+jsonPath = Path(PARAM_OUTPUT_FILE)
+if jsonPath.exists():
+    with open(jsonPath, 'r') as fp:
+        results = json.load(fp)
+else:
+    raise FileExistsError("Results JSON file does not exist")
+
+temp_max_W = results['temp_max_W']
+stress_max_W = results['stress_max_W']
+stress_max_Cu = results['stress_max_Cu']
+normal_stress_max_W_Cu = results['normal_stress_max_W_Cu']
+shear_stress_max_W_Cu = results['shear_stress_max_W_Cu']

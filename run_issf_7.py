@@ -19,9 +19,9 @@ if __name__ == '__main__':
     inputJsonPathStr = None     # Either a path to a json file containing input parameters to update or None
     
     # Input parameters
-    coolantTemp=155             # degC
+    coolantTemp=50             # degC
     convectionHTC=150000        # W/m^2K
-    topSurfHeatFlux=2e7         # W/m^2
+    topSurfHeatFlux=1e7         # W/m^2
     sideSurfHeatFlux=2e8        # W/m^2
     protrusion=0.000            # m - the distance monoblock protrudes past neighbour
     coolantPressure=5e6         # Pa
@@ -116,6 +116,8 @@ if __name__ == '__main__':
     with open(Path(PARAM_OUTPUT_FILE), 'w') as fp:
         json.dump(results, fp)
     
-    temp_max = results['temp_max']
-    temp_avg = results['temp_avg']
-    stress_max = results['stress_max']
+    temp_max_W = results['temp_max_W']
+    stress_max_W = results['stress_max_W']
+    stress_max_Cu = results['stress_max_Cu']
+    normal_stress_max_W_Cu = results['normal_stress_max_W_Cu']
+    shear_stress_max_W_Cu = results['shear_stress_max_W_Cu']
