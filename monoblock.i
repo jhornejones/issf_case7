@@ -523,9 +523,22 @@ sideFluxStepHeight=${fparse monoBWidth / 2 + monoBArmHeight - protrusion}
     eigenstrain_name = thermal_expansion_eigenstrain
     block = 'armour'
   []
+  [copper_isotropic_plasticity]
+    type = IsotropicPlasticityStressUpdate
+    yield_stress = 5.5e7
+    hardening_function = copper_strain_hardening
+    block = 'interlayer'
+  []
+  [radial_return_stress]
+    type = ComputeMultipleInelasticStress
+    tangent_operator = elastic
+    inelastic_models = 'copper_isotropic_plasticity'
+    block = 'interlayer'
+  []
 
   [stress]
     type = ComputeFiniteStrainElasticStress
+    block = 'pipe armour'
   []
 
 []
@@ -619,9 +632,9 @@ sideFluxStepHeight=${fparse monoBWidth / 2 + monoBArmHeight - protrusion}
     boundary = 'back_to_pipe'
     variable = vonmises_stress
   []
-  [normal_stress_max_W_Cu]
+  [stress_max_Cu]
     type = SideExtremeValue
-    boundary = 'braze'
+    boundary = 'back_to_interlayer'
     variable = vonmises_stress  # CHANGE ME!!!!!
   []
   [shear_stress_max_W_Cu]
@@ -640,7 +653,7 @@ sideFluxStepHeight=${fparse monoBWidth / 2 + monoBArmHeight - protrusion}
   exodus = true
   [write_to_file]
     type = CSV
-    show = 'temp_max_W stress_max_W stress_max_CuCrZr normal_stress_max_W_Cu shear_stress_max_W_Cu'
+    show = 'temp_max_W stress_max_W stress_max_CuCrZr stress_max_Cu shear_stress_max_W_Cu'
     file_base = '${name}_out'
   []
 []
