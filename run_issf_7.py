@@ -13,15 +13,15 @@ if __name__ == '__main__':
     
     # MOOSE setup
     execPathStr = "/home/jhorne/projects/proteus/proteus-opt"   # ABSOLUTE Linux path to MOOSE executable
-    nTasks = 16                 # Number of cores to use
+    nTasks = 32                 # Number of cores to use
     
     # Input parameter reading - OPTIONAL
     inputJsonPathStr = None     # Either a path to a json file containing input parameters to update or None
     
     # Input parameters
-    coolantTemp=50             # degC
+    coolantTemp=150             # degC
     convectionHTC=150000        # W/m^2K
-    topSurfHeatFlux=1e7         # W/m^2
+    topSurfHeatFlux=2e7         # W/m^2
     sideSurfHeatFlux=2e8        # W/m^2
     protrusion=0.000            # m - the distance monoblock protrudes past neighbour
     coolantPressure=5e6         # Pa
@@ -118,6 +118,6 @@ if __name__ == '__main__':
     
     temp_max_W = results['temp_max_W']
     stress_max_W = results['stress_max_W']
-    stress_max_Cu = results['stress_max_Cu']
+    stress_max_CuCrZr = results['stress_max_CuCrZr']
     normal_stress_max_W_Cu = results['normal_stress_max_W_Cu']
     shear_stress_max_W_Cu = results['shear_stress_max_W_Cu']

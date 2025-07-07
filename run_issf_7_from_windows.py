@@ -15,7 +15,7 @@ vEnvDirectory = ".venv"     # EITHER the name of the vEnv directory OR None
 
 # MOOSE setup
 execPathStr = "/home/jhorne/projects/proteus/proteus-opt"   # ABSOLUTE Linux path to MOOSE executable
-nTasks = 16                 # Number of cores to use
+nTasks = 32                 # Number of cores to use
 
 # Path to parameter data JSON file - Optional
 inputJsonPathStr = None     # EITHER a path to the JSON file OR None

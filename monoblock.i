@@ -373,6 +373,13 @@ sideFluxStepHeight=${fparse monoBWidth / 2 + monoBArmHeight - protrusion}
     format = columns
     scale_factor = ${scale_spec_heat_W}
   []
+
+  [copper_strain_hardening]
+    type = PiecewiseLinear
+    data_file = ./data/copper_strain_hardening.csv
+    format = columns
+  []
+
   [side_heat_flux_func]
     type = ParsedFunction
     expression = a/(1+exp(-1e10*(y-b)))
@@ -607,9 +614,9 @@ sideFluxStepHeight=${fparse monoBWidth / 2 + monoBArmHeight - protrusion}
     boundary = 'back_to_armour'
     variable = vonmises_stress
   []
-  [stress_max_Cu]
+  [stress_max_CuCrZr]
     type = SideExtremeValue
-    boundary = 'back_to_interlayer'
+    boundary = 'back_to_pipe'
     variable = vonmises_stress
   []
   [normal_stress_max_W_Cu]
@@ -633,7 +640,7 @@ sideFluxStepHeight=${fparse monoBWidth / 2 + monoBArmHeight - protrusion}
   exodus = true
   [write_to_file]
     type = CSV
-    show = 'temp_max_W stress_max_W stress_max_Cu normal_stress_max_W_Cu shear_stress_max_W_Cu'
+    show = 'temp_max_W stress_max_W stress_max_CuCrZr normal_stress_max_W_Cu shear_stress_max_W_Cu'
     file_base = '${name}_out'
   []
 []
