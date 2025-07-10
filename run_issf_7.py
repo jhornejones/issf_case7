@@ -2,7 +2,8 @@ from moose_wrapper import *
 import json
 import sys
 
-INPUT_FILE = "monoblock.i"
+PARENT_INPUT_FILE = "monoblock_plastic.i"
+MULTIAPP_INPUT_FILES = ["monoblock_thermal.i"]
 SIM_OUTPUT_FILE = "monoblock_out.csv"
 PARAM_OUTPUT_FILE = "results.json"
 OTHER_DATA = ["data"]
@@ -19,7 +20,7 @@ if __name__ == '__main__':
     inputJsonPathStr = None     # Either a path to a json file containing input parameters to update or None
     
     # Input parameters
-    coolantTemp=150             # degC
+    coolantTemp=175             # degC
     convectionHTC=150000        # W/m^2K
     topSurfHeatFlux=2e7         # W/m^2
     sideSurfHeatFlux=2e8        # W/m^2
@@ -102,9 +103,10 @@ if __name__ == '__main__':
     
     # Setup and run MOOSE simulation
     sim = MooseSim(
-        inputFile=INPUT_FILE,
+        inputFile=PARENT_INPUT_FILE,
         outputFile=SIM_OUTPUT_FILE,
         execPathStr=execPathStr,
+        multiAppInputFiles=MULTIAPP_INPUT_FILES,
         otherData=OTHER_DATA
     )
     
@@ -119,5 +121,5 @@ if __name__ == '__main__':
     temp_max_W = results['temp_max_W']
     stress_max_W = results['stress_max_W']
     stress_max_CuCrZr = results['stress_max_CuCrZr']
-    normal_stress_max_W_Cu = results['normal_stress_max_W_Cu']
+    strain_max_Cu = results['strain_max_Cu']
     shear_stress_max_W_Cu = results['shear_stress_max_W_Cu']

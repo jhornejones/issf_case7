@@ -3,6 +3,7 @@ import uuid
 import shutil
 import subprocess
 import pandas as pd
+import copy
 
 MOOSE_COMMENT = '#'
 PARAM_START = "*_*START*_*"
@@ -10,6 +11,7 @@ PARAM_END = "*_*END*_*"
 
 class MooseSim:
     _inputFile = None
+    _multiAppInputFiles = None
     _outputFile = None
     _execPath = None
     _simPath = None
@@ -19,6 +21,7 @@ class MooseSim:
             inputFile: str,
             outputFile: str,
             execPathStr: str,
+            multiAppInputFiles: list = None,
             otherData: list = None
         ):
         
@@ -28,12 +31,18 @@ class MooseSim:
         if not Path(execPathStr).is_file():
             raise FileExistsError("MOOSE executable does not exist")
         
+        if not multiAppInputFiles is None:
+            for inFile in multiAppInputFiles:
+                if not Path(inFile).is_file():
+                    raise FileExistsError("Multiapp input files do not exist")
+        
         if not otherData is None:
             for data in otherData:
                 if not Path(data).exists():
                     raise FileExistsError("Other data does not exist")
         
         self._inputFile = inputFile
+        self._multiAppInputFiles = copy.deepcopy(multiAppInputFiles)
         self._outputFile = outputFile
         self._execPath = Path(execPathStr)
         self._simPath = self._directoryGenerator(otherData)
@@ -51,6 +60,12 @@ class MooseSim:
         inputDstPath = dirPath / self._inputFile
         shutil.copyfile(self._inputFile, inputDstPath)
         
+        # Copy MOOSE multiapp input files
+        if not self._multiAppInputFiles is None:
+            for inFile in self._multiAppInputFiles:
+                inputDstPath = dirPath / inFile
+                shutil.copyfile(inFile, inputDstPath)
+        
         # If other data to copy, copy that as well
         if not otherData is None:
             for data in otherData:
@@ -61,9 +76,18 @@ class MooseSim:
 
     # Content derived from mooseherder
     def updateInputFile(self, params: dict):
-        # Read in input file
+        # Update parent input files
         inputPath = self._simPath / self._inputFile
+        self._updateAMOOSEInputFile(inputPath, params)
+        
+        # Update multiapp input files
+        if not self._multiAppInputFiles is None:
+            for inFile in self._multiAppInputFiles:
+                inputPath = self._simPath / inFile
+                self._updateAMOOSEInputFile(inputPath, params)
+        
 
+    def _updateAMOOSEInputFile(self, inputPath: Path, params: dict):
         with open(inputPath, "r", encoding="utf-8") as in_file:
             inputLines = in_file.readlines()
         
@@ -136,7 +160,8 @@ class MooseSim:
             str(nTasks),
             self._execPath,
             '-i',
-            self._inputFile
+            self._inputFile,
+            '--allow-unused'
         ]
 
         # Run simulation
