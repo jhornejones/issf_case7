@@ -21,10 +21,10 @@
 # *_*START*_*
 
 # Boundary conditions
-coolantTemp=150       # degC
+coolantTemp=175       # degC
 convectionHTC=150000  # W/m^2K
 
-topSurfHeatFlux=2e7   # W/m^2
+topSurfHeatFlux=3.0e7   # W/m^2
 
 sideSurfHeatFlux=2e8  # W/m^2
 protrusion=0.000      # m - the distance monoblock protrudes past neighbour
@@ -133,10 +133,6 @@ stressFreeTemp=20   # degC
 sideFluxStepHeight=${fparse monoBWidth / 2 + monoBArmHeight - protrusion}
 
 #-------------------------------------------------------------------------
-
-[GlobalParams]
-  displacements = 'disp_x disp_y disp_z'
-[]
 
 [Mesh]
   second_order = ${secondOrder}
@@ -260,22 +256,13 @@ sideFluxStepHeight=${fparse monoBWidth / 2 + monoBArmHeight - protrusion}
 
 [Kernels]
   [heat_conduction]
-    type = HeatConduction
+    type = ADHeatConduction
     variable = temperature
   []
-[]
-
-[Physics]
-  [SolidMechanics]
-    [QuasiStatic]
-      [all]
-        add_variables = true
-        strain = FINITE
-        automatic_eigenstrain_names = true
-        generate_output = 'vonmises_stress maxshear_stress'
-      []
-    []
-  []
+  [heat_dt]
+    type = ADTimeDerivative
+    variable = temperature
+  []  
 []
 
 [Functions]
@@ -390,21 +377,21 @@ sideFluxStepHeight=${fparse monoBWidth / 2 + monoBArmHeight - protrusion}
 
 [Materials]
   [cucrzr_thermal_conductivity]
-    type = CoupledValueFunctionMaterial
+    type = ADCoupledValueFunctionMaterial
     v = temperature
     prop_name = thermal_conductivity
     function = cucrzr_thermal_conductivity_func
     block = 'pipe'
   []
   [copper_thermal_conductivity]
-    type = CoupledValueFunctionMaterial
+    type = ADCoupledValueFunctionMaterial
     v = temperature
     prop_name = thermal_conductivity
     function = copper_thermal_conductivity_func
     block = 'interlayer'
   []
   [tungsten_thermal_conductivity]
-    type = CoupledValueFunctionMaterial
+    type = ADCoupledValueFunctionMaterial
     v = temperature
     prop_name = thermal_conductivity
     function = tungsten_thermal_conductivity_func
@@ -412,182 +399,78 @@ sideFluxStepHeight=${fparse monoBWidth / 2 + monoBArmHeight - protrusion}
   []
 
   [cucrzr_density]
-    type = CoupledValueFunctionMaterial
+    type = ADCoupledValueFunctionMaterial
     v = temperature
     prop_name = density
     function = cucrzr_density_func
     block = 'pipe'
   []
   [copper_density]
-    type = CoupledValueFunctionMaterial
+    type = ADCoupledValueFunctionMaterial
     v = temperature
     prop_name = density
     function = copper_density_func
     block = 'interlayer'
   []
   [tungsten_density]
-    type = CoupledValueFunctionMaterial
+    type = ADCoupledValueFunctionMaterial
     v = temperature
     prop_name = density
     function = tungsten_density_func
     block = 'armour'
   []
 
-  [cucrzr_elastic_modulus]
-    type = CoupledValueFunctionMaterial
-    v = temperature
-    prop_name = elastic_modulus
-    function = cucrzr_elastic_modulus_func
-    block = 'pipe'
-  []
-  [copper_elastic_modulus]
-    type = CoupledValueFunctionMaterial
-    v = temperature
-    prop_name = elastic_modulus
-    function = copper_elastic_modulus_func
-    block = 'interlayer'
-  []
-  [tungsten_elastic_modulus]
-    type = CoupledValueFunctionMaterial
-    v = temperature
-    prop_name = elastic_modulus
-    function = tungsten_elastic_modulus_func
-    block = 'armour'
-  []
-
   [cucrzr_specific_heat]
-    type = CoupledValueFunctionMaterial
+    type = ADCoupledValueFunctionMaterial
     v = temperature
     prop_name = specific_heat
     function = cucrzr_specific_heat_func
     block = 'pipe'
   []
   [copper_specific_heat]
-    type = CoupledValueFunctionMaterial
+    type = ADCoupledValueFunctionMaterial
     v = temperature
     prop_name = specific_heat
     function = copper_specific_heat_func
     block = 'interlayer'
   []
   [tungsten_specific_heat]
-    type = CoupledValueFunctionMaterial
+    type = ADCoupledValueFunctionMaterial
     v = temperature
     prop_name = specific_heat
     function = tungsten_specific_heat_func
     block = 'armour'
   []
-
-  [cucrzr_elasticity]
-    type = ComputeVariableIsotropicElasticityTensor
-    args = temperature
-    youngs_modulus = elastic_modulus
-    poissons_ratio = '${fparse 0.33*scale_poisson_CuCrZr}'
-    block = 'pipe'
-  []
-  [copper_elasticity]
-    type = ComputeVariableIsotropicElasticityTensor
-    args = temperature
-    youngs_modulus = elastic_modulus
-    poissons_ratio = '${fparse 0.33*scale_poisson_Cu}'
-    block = 'interlayer'
-  []
-  [tungsten_elasticity]
-    type = ComputeVariableIsotropicElasticityTensor
-    args = temperature
-    youngs_modulus = elastic_modulus
-    poissons_ratio = '${fparse 0.29*scale_poisson_W}'
-    block = 'armour'
-  []
-
-  [cucrzr_expansion]
-    type = ComputeInstantaneousThermalExpansionFunctionEigenstrain
-    temperature = temperature
-    stress_free_temperature = ${stressFreeTemp}
-    thermal_expansion_function = cucrzr_thermal_expansion_func
-    eigenstrain_name = thermal_expansion_eigenstrain
-    block = 'pipe'
-  []
-  [copper_expansion]
-    type = ComputeInstantaneousThermalExpansionFunctionEigenstrain
-    temperature = temperature
-    stress_free_temperature = ${stressFreeTemp}
-    thermal_expansion_function = copper_thermal_expansion_func
-    eigenstrain_name = thermal_expansion_eigenstrain
-    block = 'interlayer'
-  []
-  [tungsten_expansion]
-    type = ComputeInstantaneousThermalExpansionFunctionEigenstrain
-    temperature = temperature
-    stress_free_temperature = ${stressFreeTemp}
-    thermal_expansion_function = tungsten_thermal_expansion_func
-    eigenstrain_name = thermal_expansion_eigenstrain
-    block = 'armour'
-  []
-
-  [stress]
-    type = ComputeFiniteStrainElasticStress
-  []
-
 []
 
 [BCs]
   [heat_flux_in_top]
-    type = NeumannBC
+    type = ADNeumannBC
     variable = temperature
     boundary = 'top'
     value = ${topSurfHeatFlux}
   []
   [heat_flux_in_left]
-    type = FunctionNeumannBC
+    type = ADFunctionNeumannBC
     variable = temperature
     boundary = 'left'
     function = side_heat_flux_func
   []
   [heat_flux_in_right]
-    type = FunctionNeumannBC
+    type = ADFunctionNeumannBC
     variable = temperature
     boundary = 'right'
     function = side_heat_flux_func
   []
   [heat_flux_out]
-    type = ConvectiveHeatFluxBC
+    type = ADConvectiveHeatFluxBC
     variable = temperature
     boundary = 'internal_boundary'
     T_infinity = ${coolantTemp}
     heat_transfer_coefficient = ${convectionHTC}
   []
-  [coolant_pressure_x]
-    type = Pressure
-    variable = disp_x
-    boundary = 'internal_boundary'
-    factor = ${coolantPressure}
-  []
-  [coolant_pressure_y]
-    type = Pressure
-    variable = disp_y
-    boundary = 'internal_boundary'
-    factor = ${coolantPressure}
-  []
-  [fixed_x]
-    type = DirichletBC
-    variable = disp_x
-    boundary = 'centre_x_bottom_y_back_z'
-    value = 0
-  []
-  [fixed_y]
-    type = DirichletBC
-    variable = disp_y
-    boundary = 'bottom'
-    value = 0
-  []
-  [fixed_z]
-    type = DirichletBC
-    variable = disp_z
-    boundary = 'back_to_armour back_to_interlayer back_to_pipe'
-    value = 0
-  []
   [temperature_symmetry]
-    type = NeumannBC
+    type = ADNeumannBC
     variable = temperature
     boundary = 'back_to_armour back_to_interlayer back_to_pipe'
     value = 0
@@ -602,33 +485,28 @@ sideFluxStepHeight=${fparse monoBWidth / 2 + monoBArmHeight - protrusion}
 []
 
 [Executioner]
-  type = Steady
-  solve_type = 'PJFNK'
-  petsc_options_iname = '-pc_type -pc_hypre_type'
-  petsc_options_value = 'hypre    boomeramg'
+  type = Transient
+  solve_type = 'NEWTON'
+  petsc_options_iname = '-pc_type -pc_hypre_type -pc_hypre_boomeramg_strong_threshold -pc_hypre_boomeramg_coarsen_type -pc_hypre_boomeramg_interp_type '
+  petsc_options_value = '   hypre      boomeramg                                  0.7                             HMIS                           ext+i '
+  automatic_scaling = true
+
+  l_max_its = 50
+  nl_max_its = 10
+  nl_rel_tol = 1e-12
+  nl_abs_tol = 1e-9
+  l_tol = 1e-9
+
+  start_time = 0.0
+  end_time = 2.0
+  dt = 1
+  dtmin = 0.0001
+
+  steady_state_tolerance = 1e-6
+  steady_state_detection = true
 []
 
 [Postprocessors]
-  [stress_max_W]
-    type = SideExtremeValue
-    boundary = 'back_to_armour'
-    variable = vonmises_stress
-  []
-  [stress_max_CuCrZr]
-    type = SideExtremeValue
-    boundary = 'back_to_pipe'
-    variable = vonmises_stress
-  []
-  [normal_stress_max_W_Cu]
-    type = SideExtremeValue
-    boundary = 'braze'
-    variable = vonmises_stress  # CHANGE ME!!!!!
-  []
-  [shear_stress_max_W_Cu]
-    type = SideExtremeValue
-    boundary = 'braze'
-    variable = maxshear_stress
-  []
   [temp_max_W]
       type = NodalExtremeValue
       variable = temperature
@@ -638,9 +516,4 @@ sideFluxStepHeight=${fparse monoBWidth / 2 + monoBArmHeight - protrusion}
 
 [Outputs]
   exodus = true
-  [write_to_file]
-    type = CSV
-    show = 'temp_max_W stress_max_W stress_max_CuCrZr normal_stress_max_W_Cu shear_stress_max_W_Cu'
-    file_base = '${name}_out'
-  []
 []

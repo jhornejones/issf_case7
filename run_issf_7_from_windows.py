@@ -119,6 +119,6 @@ else:
 
 temp_max_W = results['temp_max_W']
 stress_max_W = results['stress_max_W']
-stress_max_Cu = results['stress_max_Cu']
-normal_stress_max_W_Cu = results['normal_stress_max_W_Cu']
+stress_max_CuCrZr = results['stress_max_CuCrZr']
+strain_max_Cu = results['strain_max_Cu']
 shear_stress_max_W_Cu = results['shear_stress_max_W_Cu']
