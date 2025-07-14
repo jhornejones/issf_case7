@@ -4,3 +4,5 @@
 /__pycache__/
 /outputs/
 *.json
+doe.csv
+doeResults.csv
