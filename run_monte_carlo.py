@@ -59,6 +59,7 @@ def runSampling(parser):
     parser.add_argument("--id", help="Subcase id", default="a", choices=["a", "b", "c", "bandc"])
     parser.add_argument("--restart", action=argparse.BooleanOptionalAction, default=False)
     parser.add_argument("--exec_path", help="Path to MOOSE executable")
+    parser.add_argument("--n_cores", help="Number of cores per MOOSE instance", default=N_CORES_DEFAULT)
 
     args = parser.parse_args()
 
@@ -160,6 +161,7 @@ def singleOutputFileName(id, batchIndex) -> str:
 def runExecution(argv):
     print("Running execution")
 
+    # Parse inputs
     parser.add_argument("--id", help="Subcase id", default="a", choices=["a", "b", "c", "bandc"])
     parser.add_argument("--batch_no", help="Sample batch number", default=0)
     parser.add_argument("--exec_path", help="Path to MOOSE executable")
@@ -168,12 +170,14 @@ def runExecution(argv):
 
     args = parser.parse_args()
 
+    # Generate MOOSE input for given sample
     samples = pd.read_csv(sampleInputsFileName(args.id, args.batch_no), index_col=0)
     sample = samples.iloc[args.i_array].to_dict()
     
     with open(singleInputFileName(args.id, args.i_array), "w") as fp:
         json.dump(sample, fp)
 
+    # Run MOOSE
     command = f"python run_issf_7.py {args.exec_path} {args.n_cores} {singleInputFileName(args.id, args.i_array)} {singleOutputFileName(args.id, args.i_array)}"
     subprocess.run(command, shell=True)
 
