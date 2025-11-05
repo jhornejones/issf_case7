@@ -14,7 +14,7 @@ if __name__ == '__main__':
     
     # MOOSE setup
     execPathStr = "/home/jhorne/projects/proteus/proteus-opt"   # ABSOLUTE Linux path to MOOSE executable
-    nTasks = 32                 # Number of cores to use
+    nTasks = 6                 # Number of cores to use
     
     # Input parameter reading - OPTIONAL
     inputJsonPathStr = None     # Either a path to a json file containing input parameters to update or None
@@ -36,7 +36,7 @@ if __name__ == '__main__':
     scale_youngs_CuCrZr=1.0
     scale_youngs_W=1.0
 
-    scale_poisson_Cu=1.0
+    scale_poisson_Cu=0.6
     
     #------------------------- END -------------------------------------------
     #-------------------------------------------------------------------------
