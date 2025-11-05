@@ -17,7 +17,7 @@ if __name__ == '__main__':
     nTasks = 6                 # Number of cores to use
     
     # Input parameter reading - OPTIONAL
-    inputJsonPathStr = None     # Either a path to a json file containing input parameters to update or None
+    inputJsonPathStr = None     # Either a path to a json file containing input parameters to update or None  
     
     # Input parameters
     coolantTemp=155             # degC
@@ -41,17 +41,22 @@ if __name__ == '__main__':
     #------------------------- END -------------------------------------------
     #-------------------------------------------------------------------------
     
-    # Parse arguements if they exist (allows call from Windows)
+    outputJsonPathStr = PARAM_OUTPUT_FILE   # Default value
+
+    # Parse arguments if they exist (allows call from other script)
     if len(sys.argv) > 1:
-        if len(sys.argv) != 4:
-            raise ValueError("Invalid number of command line arguments")
-        else:
+        if len(sys.argv) == 4 or len(sys.argv) == 5:
             execPathStr = sys.argv[1]
             
             if sys.argv[2].isnumeric():
                 nTasks = int(sys.argv[2])
             
             inputJsonPathStr = sys.argv[3]
+
+            if len(sys.argv) == 5:
+                outputJsonPathStr = sys.argv[4]
+        else:
+            raise ValueError("Invalid number of command line arguments")
     
     if inputJsonPathStr is None:
         params = {
@@ -89,7 +94,7 @@ if __name__ == '__main__':
     results = sim.collectSteadyStateOutputs()
     
     # Make results available
-    with open(Path(PARAM_OUTPUT_FILE), 'w') as fp:
+    with open(Path(outputJsonPathStr), 'w') as fp:
         json.dump(results, fp)
     
     temp_max_W = results['temp_max_W']

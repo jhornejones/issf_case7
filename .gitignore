@@ -6,3 +6,5 @@
 *.json
 doe.csv
 doeResults.csv
+input_samples_*
+output_samples_*
