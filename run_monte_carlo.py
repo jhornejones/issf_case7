@@ -21,6 +21,9 @@ FILE_IN_SINGLE = "input_single_"
 FILE_OUT_SINGLE = "output_single_"
 FILE_SINGLE_EXT = ".json"
 
+FILE_SLURM_EXEC = "exec.slurm"
+FILE_SLURM_EVAL = "eval.slurm"
+
 N_CORES_DEFAULT = 6
 
 """
@@ -58,13 +61,11 @@ def runSampling(parser):
 
     parser.add_argument("--id", help="Subcase id", default="a", choices=["a", "b", "c", "bandc"])
     parser.add_argument("--restart", action=argparse.BooleanOptionalAction, default=False)
+    parser.add_argument("--batch_size", help="Sampling batch size", type=int, default=1000)
     parser.add_argument("--exec_path", help="Path to MOOSE executable")
     parser.add_argument("--n_cores", help="Number of cores per MOOSE instance", default=N_CORES_DEFAULT)
 
     args = parser.parse_args()
-
-    batchSize = 1000
-    batchSize = 10          # Remove after testing
 
     # Process restart if required
     if args.restart:
@@ -74,27 +75,28 @@ def runSampling(parser):
 
     # Run sampling
     if args.id == "a":
-        samples = generateSamplesCaseA(batchSize)
+        samples = generateSamplesCaseA(args.batch_size)
     elif args.id == "b":
-        samples = generateSamplesCaseB(batchSize)
+        samples = generateSamplesCaseB(args.batch_size)
     elif args.id == "c":
-        samples = generateSamplesCaseC(batchSize)
+        samples = generateSamplesCaseC(args.batch_size)
     elif args.id == "bandc":
-        samples = generateSamplesCaseC(batchSize)
+        samples = generateSamplesCaseC(args.batch_size)
 
     # Save sampling data
     files = sorted([f for f in Path.cwd().iterdir() if f.is_file() and f"{FILE_IN}{args.id}" in f.name], key=lambda x: x.stem)
     if files:
         temp = pd.read_csv(files[-1], index_col=0)
         indStart = temp.index[-1] + 1
-        samples.index = list(range(indStart,indStart+batchSize,1))
+        samples.index = list(range(indStart,indStart+args.batch_size,1))
 
-    samples.to_csv(sampleInputsFileName(args.id, len(files)))
+    batchNo = len(files)
+    samples.to_csv(sampleInputsFileName(args.id, batchNo))
 
-    print(f"Generated {batchSize} new samples for case {args.id}. Total now {samples.index[-1]+1}")
+    print(f"Generated {args.batch_size} new samples for case {args.id}. Total now {samples.index[-1]+1}")
 
-    # Queue exec job
-    # ADD HERE
+    # Queue follow on jobs
+    generateAndQueueExecAndEval(args, batchNo)
 
 def generateSamplesCaseA(batchSize: int) -> pd.DataFrame:
 
@@ -148,6 +150,51 @@ def generateSamplesCaseC(batchSize: int) -> pd.DataFrame:
 
     samples = pd.DataFrame(samples_dict)
     return samples
+
+def generateAndQueueExecAndEval(args, batchNo):
+
+    # Generate submission scripts
+    generateExecutionSlurmScript(args, batchNo)
+
+
+    # Run execution job
+    result = subprocess.run(
+        f"sbatch {FILE_SLURM_EXEC}",
+        capture_output=True,
+        text = True,
+        shell=True
+    )
+
+    print(f"stdout: {result.stdout}")
+    print(f"stderr: {result.stderr}")
+
+def generateExecutionSlurmScript(args, batchNo):
+    with open(FILE_SLURM_EXEC, "w") as fp:
+        # Fixed initial content
+        fp.write("#!/bin/bash\n")
+        fp.write("#SBATCH --job-name=issf7_exec\n")
+        fp.write("#SBATCH --partition=cpu\n")
+        fp.write("#SBATCH --time=1:00:00\n")
+        fp.write("#SBATCH --nodes=1\n")
+        fp.write("#SBATCH --cpus-per-task=1\n")
+        
+        # Args dependent slurm input
+        fp.write(f"#SBATCH --ntasks-per-node={args.n_cores}\n")
+        fp.write(f"#SBATCH --array=0-{args.batch_size - 1}\n")
+
+        # Commands
+        fp.write("source .venv/bin/activate\n")
+
+        runCom = "python run_monte_carlo.py --exec_type execution"
+        runCom += f"--id {args.id}"
+        runCom += f"--batch_no {batchNo}"
+        runCom += f"--n_cores {args.n_cores}"
+        runCom += f"--exec_path {args.exec_path}"
+        runCom += f"--i_array $SLURM_ARRAY_TASK_ID"
+
+        runCom += "\n"
+
+        fp.write(runCom)
 
 def sampleInputsFileName(id, batchNo) -> str:
     return f"{FILE_IN}{id}_{batchNo:05d}{FILE_IN_EXT}"

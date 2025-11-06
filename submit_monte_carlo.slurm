@@ -6,4 +6,4 @@
 #module load python
 source .venv/bin/activate
 
-python run_monte_carlo.py --exec_type sampling --id a --restart --n_cores 4
+python run_monte_carlo.py --exec_type sampling --id a --restart --batch_size 10 --n_cores 4 --exec_path /lustre/home/jhorne/projects/moose/test/moose_test-opt

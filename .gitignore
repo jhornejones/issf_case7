@@ -8,3 +8,5 @@ doe.csv
 doeResults.csv
 input_samples_*
 output_samples_*
+exec.slurm
+eval.slurm
