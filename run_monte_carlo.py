@@ -63,7 +63,7 @@ def runSampling(parser):
     parser.add_argument("--restart", action=argparse.BooleanOptionalAction, default=False)
     parser.add_argument("--batch_size", help="Sampling batch size", type=int, default=1000)
     parser.add_argument("--exec_path", help="Path to MOOSE executable")
-    parser.add_argument("--n_cores", help="Number of cores per MOOSE instance", default=N_CORES_DEFAULT)
+    parser.add_argument("--n_cores", help="Number of cores per MOOSE instance", type=int, default=N_CORES_DEFAULT)
 
     args = parser.parse_args()
 
@@ -210,10 +210,10 @@ def runExecution(argv):
 
     # Parse inputs
     parser.add_argument("--id", help="Subcase id", default="a", choices=["a", "b", "c", "bandc"])
-    parser.add_argument("--batch_no", help="Sample batch number", default=0)
+    parser.add_argument("--batch_no", help="Sample batch number", type=int, default=0)
     parser.add_argument("--exec_path", help="Path to MOOSE executable")
-    parser.add_argument("--n_cores", help="Number of cores per MOOSE instance", default=N_CORES_DEFAULT)
-    parser.add_argument("--i_array", help="SLURM_ARRAY_TASK_ID variable", default=0)
+    parser.add_argument("--n_cores", help="Number of cores per MOOSE instance", type=int, default=N_CORES_DEFAULT)
+    parser.add_argument("--i_array", help="SLURM_ARRAY_TASK_ID variable", type=int, default=0)
 
     args = parser.parse_args()
 
