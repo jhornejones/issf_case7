@@ -2,6 +2,7 @@
 #SBATCH --job-name=issf7_sampling
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
+#SBATCH --time=0:05:00
 
 #module load python
 source .venv/bin/activate
