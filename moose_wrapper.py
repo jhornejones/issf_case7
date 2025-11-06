@@ -167,7 +167,7 @@ class MooseSim:
         # Run simulation
         subprocess.run(
             args,
-            shell=True,
+            shell=False,
             cwd=self._simPath,
             check=False
         )

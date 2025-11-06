@@ -159,10 +159,10 @@ def generateAndQueueExecAndEval(args, batchNo):
 
     # Run execution job
     result = subprocess.run(
-        f"sbatch {FILE_SLURM_EXEC}",
+        ["sbatch", FILE_SLURM_EXEC],
         capture_output=True,
         text = True,
-        shell=True
+        shell = False
     )
 
     print(f"stdout: {result.stdout}")
@@ -183,7 +183,7 @@ def generateExecutionSlurmScript(args, batchNo):
         fp.write(f"#SBATCH --array=0-{args.batch_size - 1}\n")
 
         # Commands
-        fp.write("conda activate moose\n")
+        fp.write("source activate moose\n")
         fp.write("source .venv/bin/activate\n")
 
         runCom = "python run_monte_carlo.py --exec_type execution "
@@ -225,9 +225,17 @@ def runExecution(argv):
     with open(singleInputFileName(args.id, args.i_array), "w") as fp:
         json.dump(sample, fp)
 
-    # Run MOOSE
-    command = f"python run_issf_7.py {args.exec_path} {args.n_cores} {singleInputFileName(args.id, args.i_array)} {singleOutputFileName(args.id, args.i_array)}"
-    subprocess.run(command, shell=True)
+    # Run MOOSE via ISSF run script
+    command = [
+        "python",
+        "run_issf_7.py",
+        args.exec_path,
+        str(args.n_cores),
+        singleInputFileName(args.id, args.i_array),
+        singleOutputFileName(args.id, args.i_array)
+    ]
+    
+    subprocess.run(command, shell=False)
 
 def runEvaluation(argv):
     print("Running evaluation")
