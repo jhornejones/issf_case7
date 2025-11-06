@@ -8,6 +8,7 @@ import math as m
 
 from scipy import stats
 import pandas as pd
+import numpy as np
 
 ARG_SAMPLE = "sampling"
 ARG_EXEC = "execution"
@@ -25,6 +26,15 @@ FILE_SLURM_EXEC = "exec.slurm"
 FILE_SLURM_EVAL = "eval.slurm"
 
 N_CORES_DEFAULT = 6
+
+FAILURE_CRIT = {
+    "shear_stress_max_W_Cu": 39E6,
+    "strain_max_Cu": 0.1,
+    "stress_max_CuCrZr": 400E6,
+    "stress_max_W": 750E6,
+    "temp_max_W": 3422,
+    "stress_max_W_cons": 300E6
+}
 
 """
 Read run type (sampling, execution, or evaluation)
@@ -57,7 +67,7 @@ Evaluation
 """
 
 def runSampling(parser):
-    print("Running sampling")
+    print("Running sampling", flush=True)
 
     parser.add_argument("--id", help="Subcase id", default="a", choices=["a", "b", "c", "bandc"])
     parser.add_argument("--restart", action=argparse.BooleanOptionalAction, default=False)
@@ -84,11 +94,7 @@ def runSampling(parser):
         samples = generateSamplesCaseC(args.batch_size)
 
     # Save sampling data
-    files = sorted([f for f in Path.cwd().iterdir() if f.is_file() and f"{FILE_IN}{args.id}" in f.name], key=lambda x: x.stem)
-    if files:
-        temp = pd.read_csv(files[-1], index_col=0)
-        indStart = temp.index[-1] + 1
-        samples.index = list(range(indStart,indStart+args.batch_size,1))
+    files = [f for f in Path.cwd().iterdir() if f.is_file() and f"{FILE_IN}{args.id}" in f.name]
 
     batchNo = len(files)
     samples.to_csv(sampleInputsFileName(args.id, batchNo))
@@ -97,6 +103,8 @@ def runSampling(parser):
 
     # Queue follow on jobs
     generateAndQueueExecAndEval(args, batchNo)
+
+    print("Queued execution and evaluation jobs", flush=True)
 
 def generateSamplesCaseA(batchSize: int) -> pd.DataFrame:
 
@@ -153,11 +161,10 @@ def generateSamplesCaseC(batchSize: int) -> pd.DataFrame:
 
 def generateAndQueueExecAndEval(args, batchNo):
 
-    # Generate submission scripts
+    # Generate execution submission script
     generateExecutionSlurmScript(args, batchNo)
 
-
-    # Run execution job
+    # Queue execution job
     result = subprocess.run(
         ["sbatch", FILE_SLURM_EXEC],
         capture_output=True,
@@ -165,8 +172,24 @@ def generateAndQueueExecAndEval(args, batchNo):
         shell = False
     )
 
-    print(f"stdout: {result.stdout}")
-    print(f"stderr: {result.stderr}")
+    if result.stderr:
+        raise RuntimeError("Execution queue submission failed")
+    
+    execJobId = result.stdout.split(" ")[-1]
+
+    # Generate evaluation submission script
+    generateEvaluationSlurmScript(args, batchNo, execJobId)
+
+    # Queue evaluation job
+    result = subprocess.run(
+        ["sbatch", FILE_SLURM_EVAL],
+        capture_output=True,
+        text = True,
+        shell = False
+    )
+
+    if result.stderr:
+        raise RuntimeError("Evaluation queue submission failed")
 
 def generateExecutionSlurmScript(args, batchNo):
     with open(FILE_SLURM_EXEC, "w") as fp:
@@ -183,7 +206,6 @@ def generateExecutionSlurmScript(args, batchNo):
         fp.write(f"#SBATCH --array=0-{args.batch_size - 1}\n")
 
         # Commands
-        fp.write("source activate moose\n")
         fp.write("source .venv/bin/activate\n")
 
         runCom = "python run_monte_carlo.py --exec_type execution "
@@ -197,8 +219,39 @@ def generateExecutionSlurmScript(args, batchNo):
 
         fp.write(runCom)
 
+def generateEvaluationSlurmScript(args, batchNo, execJobId):
+    with open(FILE_SLURM_EVAL, "w") as fp:
+        # Fixed initial content
+        fp.write("#!/bin/bash\n")
+        fp.write("#SBATCH --job-name=issf7_eval\n")
+        fp.write("#SBATCH --partition=cpu\n")
+        fp.write("#SBATCH --time=0:10:00\n")
+        fp.write("#SBATCH --nodes=1\n")
+        fp.write("#SBATCH --cpus-per-task=1\n")
+        fp.write("#SBATCH --ntasks-per-node=1\n")
+
+        # Dependency on exec job
+        fp.write(f"#SBATCH --dependency=afterany:{execJobId}\n")
+
+        # Commands
+        fp.write("source .venv/bin/activate\n")
+
+        runCom = "python run_monte_carlo.py --exec_type evaluation "
+        runCom += f"--id {args.id} "
+        runCom += f"--batch_no {batchNo} "
+        runCom += f"--batch_size {args.batch_size} "
+        runCom += f"--n_cores {args.n_cores} "
+        runCom += f"--exec_path {args.exec_path} "
+
+        runCom += "\n"
+
+        fp.write(runCom)
+
 def sampleInputsFileName(id, batchNo) -> str:
     return f"{FILE_IN}{id}_{batchNo:05d}{FILE_IN_EXT}"
+
+def sampleOutputsFileName(id, batchNo) -> str:
+    return f"{FILE_OUT}{id}_{batchNo:05d}{FILE_OUT_EXT}"
 
 def singleInputFileName(id, batchIndex) -> str:
     return f"{FILE_IN_SINGLE}{id}_{batchIndex:05d}{FILE_SINGLE_EXT}"
@@ -207,7 +260,7 @@ def singleOutputFileName(id, batchIndex) -> str:
     return f"{FILE_OUT_SINGLE}{id}_{batchIndex:05d}{FILE_SINGLE_EXT}"
 
 def runExecution(argv):
-    print("Running execution")
+    print("Running execution", flush=True)
 
     # Parse inputs
     parser.add_argument("--id", help="Subcase id", default="a", choices=["a", "b", "c", "bandc"])
@@ -238,7 +291,39 @@ def runExecution(argv):
     subprocess.run(command, shell=False)
 
 def runEvaluation(argv):
-    print("Running evaluation")
+    print("Running evaluation", flush=True)
+
+    # Parse inputs
+    parser.add_argument("--id", help="Subcase id", default="a", choices=["a", "b", "c", "bandc"])
+    parser.add_argument("--batch_no", help="Sample batch number", type=int, default=0)
+    parser.add_argument("--batch_size", help="Sampling batch size", type=int)
+    parser.add_argument("--exec_path", help="Path to MOOSE executable")
+    parser.add_argument("--n_cores", help="Number of cores per MOOSE instance", type=int, default=N_CORES_DEFAULT)
+    
+    args = parser.parse_args()
+
+    # Read in output files and combine
+    singleOutputFiles = [f for f in Path.cwd().iterdir() if f.is_file() and f"{FILE_OUT_SINGLE}{args.id}" in f.name]
+    if len(singleOutputFiles) != args.batch_size:
+        raise ValueError("Some execution jobs failed")
+    
+    allData = {}
+    for i in range(args.batch_size):
+        with open(singleOutputFileName(args.id, i), "r") as fp:
+            allData.update({i: json.load(fp)})
+    
+    combinedData = pd.DataFrame.from_dict(allData, orient='index')
+    combinedData.to_csv(sampleOutputsFileName(args.id, args.batch_no))
+
+    # Compute failures
+    combinedData["stress_max_W_cons"] = combinedData["stress_max_W"].copy()
+    
+    combinedData.sub(pd.Series(FAILURE_CRIT), axis=0)
+    failures = pd.DataFrame(np.zeros(combinedData.to_numpy().shape))
+    
+
+    print(failures)
+    
 
 if __name__ == '__main__':
 
