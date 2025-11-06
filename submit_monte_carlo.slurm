@@ -5,6 +5,7 @@
 #SBATCH --time=0:05:00
 
 #module load python
+conda activate moose
 source .venv/bin/activate
 
-python run_monte_carlo.py --exec_type sampling --id a --restart --batch_size 10 --n_cores 4 --exec_path /lustre/home/jhorne/projects/moose/test/moose_test-opt
+python run_monte_carlo.py --exec_type sampling --id a --restart --batch_size 4 --n_cores 8 --exec_path /lustre/home/jhorne/projects/moose/test/moose_test-opt
