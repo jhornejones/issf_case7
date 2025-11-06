@@ -183,6 +183,7 @@ def generateExecutionSlurmScript(args, batchNo):
         fp.write(f"#SBATCH --array=0-{args.batch_size - 1}\n")
 
         # Commands
+        fp.write("conda activate moose\n")
         fp.write("source .venv/bin/activate\n")
 
         runCom = "python run_monte_carlo.py --exec_type execution "
