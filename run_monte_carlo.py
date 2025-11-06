@@ -185,12 +185,12 @@ def generateExecutionSlurmScript(args, batchNo):
         # Commands
         fp.write("source .venv/bin/activate\n")
 
-        runCom = "python run_monte_carlo.py --exec_type execution"
-        runCom += f"--id {args.id}"
-        runCom += f"--batch_no {batchNo}"
-        runCom += f"--n_cores {args.n_cores}"
-        runCom += f"--exec_path {args.exec_path}"
-        runCom += f"--i_array $SLURM_ARRAY_TASK_ID"
+        runCom = "python run_monte_carlo.py --exec_type execution "
+        runCom += f"--id {args.id} "
+        runCom += f"--batch_no {batchNo} "
+        runCom += f"--n_cores {args.n_cores} "
+        runCom += f"--exec_path {args.exec_path} "
+        runCom += f"--i_array $SLURM_ARRAY_TASK_ID "
 
         runCom += "\n"
 
