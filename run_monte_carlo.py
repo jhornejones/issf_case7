@@ -226,6 +226,7 @@ def generateExecutionSlurmScript(args):
         runCom += f"--id {args.id} "
         runCom += f"--batch_no {args.batch_no} "
         runCom += f"--n_cores {args.n_cores} "
+        runCom += f"--mem {m.floor(350.0 * args.n_cores / 32)}G "   # This is CUMULUS specific - needs generalising
         runCom += f"--exec_path {args.exec_path} "
         runCom += f"--i_array $SLURM_ARRAY_TASK_ID "
 
