@@ -308,8 +308,16 @@ def runExecution(argv):
         singleInputFileName(args.id, args.i_array),
         singleOutputFileName(args.id, args.i_array)
     ]
-    
-    subprocess.run(command, shell=False)
+
+    result = subprocess.run(
+        command,
+        capture_output=True,
+        text = True,
+        shell = False
+    )
+
+    if result.stderr:
+        raise RuntimeError(f"run_issf_7.py error: {result.stderr}")
 
 def runEvaluation(argv):
     print("Running evaluation", flush=True)
@@ -323,20 +331,23 @@ def runEvaluation(argv):
     
     args = parser.parse_args()
 
-    # Read in output files and combine
-    singleOutputFiles = [f for f in Path.cwd().iterdir() if f.is_file() and f"{FILE_SINGLE_OUT}{args.id}" in f.name]
-    if len(singleOutputFiles) != args.batch_size:
-        raise ValueError("Some execution jobs failed")
-    
+    # Read in output files and combine    
     allData = {}
     for i in range(args.batch_size):
-        with open(singleOutputFileName(args.id, i), "r") as fp:
-            allData.update({i: json.load(fp)})
+        fPath = Path(singleOutputFileName(args.id, i))
+
+        if fPath.exists():
+            with open(fPath, "r") as fp:
+                allData.update({i: json.load(fp)})
+        else:
+            print(f"WARNING: model run {i} failed")
     
     combinedData = pd.DataFrame.from_dict(allData, orient='index')
     combinedData.to_csv(sampleOutputsFileName(args.id, args.batch_no))
 
     # Delete individual output files
+    singleOutputFiles = [f for f in Path.cwd().iterdir() if f.is_file() and f"{FILE_SINGLE_OUT}{args.id}" in f.name]
+
     for f in singleOutputFiles:
         f.unlink()
 
@@ -350,7 +361,7 @@ def runEvaluation(argv):
     
     probFail = failures.mean(axis=0)
 
-    probFail["batch_size"] = args.batch_size
+    probFail["batch_size"] = len(combinedData.index)
     probFail.name = args.batch_no
 
     if Path(failuresBatchesFileName(args.id)).exists():
