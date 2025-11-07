@@ -8,5 +8,8 @@ doe.csv
 doeResults.csv
 input_samples_*
 output_samples_*
+failure_*
 exec.slurm
 eval.slurm
+samp.slurm
+errors.csv

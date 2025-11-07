@@ -14,14 +14,18 @@ ARG_SAMPLE = "sampling"
 ARG_EXEC = "execution"
 ARG_EVAL = "evaluation"
 
-FILE_IN = "input_samples_"
-FILE_IN_EXT = ".csv"
-FILE_OUT = "output_samples_"
-FILE_OUT_EXT = ".csv"
-FILE_IN_SINGLE = "input_single_"
-FILE_OUT_SINGLE = "output_single_"
+FILE_RAW_IN = "input_samples_"
+FILE_RAW_IN_EXT = ".csv"
+FILE_RAW_OUT = "output_samples_"
+FILE_RAW_OUT_EXT = ".csv"
+FILE_SINGLE_IN = "input_single_"
+FILE_SINGLE_OUT = "output_single_"
 FILE_SINGLE_EXT = ".json"
+FILE_FAIL = "failure_"
+FILE_FAIL_BATCHES = "failure_batches_"
+FILE_FAIL_EXT = ".csv"
 
+FILE_SLURM_SAMP = "samp.slurm"
 FILE_SLURM_EXEC = "exec.slurm"
 FILE_SLURM_EVAL = "eval.slurm"
 
@@ -35,6 +39,10 @@ FAILURE_CRIT = {
     "temp_max_W": 3422,
     "stress_max_W_cons": 300E6
 }
+
+N_BATCH_MIN = 10    # Minimum number of batches
+N_RUN_MAX = 1E7     # Maximum number of model runs
+SE_TOL = 1E-6
 
 """
 Read run type (sampling, execution, or evaluation)
@@ -72,6 +80,7 @@ def runSampling(parser):
     parser.add_argument("--id", help="Subcase id", default="a", choices=["a", "b", "c", "bandc"])
     parser.add_argument("--restart", action=argparse.BooleanOptionalAction, default=False)
     parser.add_argument("--batch_size", help="Sampling batch size", type=int, default=1000)
+    parser.add_argument("--batch_no", help="Sampling batch number", type=int, default=0)
     parser.add_argument("--exec_path", help="Path to MOOSE executable")
     parser.add_argument("--n_cores", help="Number of cores per MOOSE instance", type=int, default=N_CORES_DEFAULT)
 
@@ -79,9 +88,17 @@ def runSampling(parser):
 
     # Process restart if required
     if args.restart:
-        files = [f for f in Path.cwd().iterdir() if f.is_file() and (f"{FILE_IN}{args.id}" in f.name or f"{FILE_OUT}{args.id}" in f.name or f"{FILE_IN_SINGLE}{args.id}" in f.name or f"{FILE_OUT_SINGLE}{args.id}" in f.name)]
+        files = [f for f in Path.cwd().iterdir() if f.is_file() and f"{FILE_RAW_IN}{args.id}" in f.name]
+        files = files + [f for f in Path.cwd().iterdir() if f.is_file() and f"{FILE_RAW_OUT}{args.id}" in f.name]
+        files = files + [f for f in Path.cwd().iterdir() if f.is_file() and f"{FILE_SINGLE_IN}{args.id}" in f.name]
+        files = files + [f for f in Path.cwd().iterdir() if f.is_file() and f"{FILE_SINGLE_OUT}{args.id}" in f.name]
+        files = files + [f for f in Path.cwd().iterdir() if f.is_file() and f"{FILE_FAIL}{args.id}" in f.name]
+        files = files + [f for f in Path.cwd().iterdir() if f.is_file() and f"{FILE_FAIL_BATCHES}{args.id}" in f.name]
+
         for f in files:
             Path.unlink(f)
+        
+        args.batch_no = 0
 
     # Run sampling
     if args.id == "a":
@@ -94,15 +111,12 @@ def runSampling(parser):
         samples = generateSamplesCaseC(args.batch_size)
 
     # Save sampling data
-    files = [f for f in Path.cwd().iterdir() if f.is_file() and f"{FILE_IN}{args.id}" in f.name]
-
-    batchNo = len(files)
-    samples.to_csv(sampleInputsFileName(args.id, batchNo))
+    samples.to_csv(sampleInputsFileName(args.id, args.batch_no))
 
     print(f"Generated {args.batch_size} new samples for case {args.id}. Total now {samples.index[-1]+1}")
 
     # Queue follow on jobs
-    generateAndQueueExecAndEval(args, batchNo)
+    generateAndQueueExecAndEval(args)
 
     print("Queued execution and evaluation jobs", flush=True)
 
@@ -159,10 +173,10 @@ def generateSamplesCaseC(batchSize: int) -> pd.DataFrame:
     samples = pd.DataFrame(samples_dict)
     return samples
 
-def generateAndQueueExecAndEval(args, batchNo):
+def generateAndQueueExecAndEval(args):
 
     # Generate execution submission script
-    generateExecutionSlurmScript(args, batchNo)
+    generateExecutionSlurmScript(args)
 
     # Queue execution job
     result = subprocess.run(
@@ -178,7 +192,7 @@ def generateAndQueueExecAndEval(args, batchNo):
     execJobId = result.stdout.split(" ")[-1]
 
     # Generate evaluation submission script
-    generateEvaluationSlurmScript(args, batchNo, execJobId)
+    generateEvaluationSlurmScript(args, execJobId)
 
     # Queue evaluation job
     result = subprocess.run(
@@ -191,7 +205,7 @@ def generateAndQueueExecAndEval(args, batchNo):
     if result.stderr:
         raise RuntimeError("Evaluation queue submission failed")
 
-def generateExecutionSlurmScript(args, batchNo):
+def generateExecutionSlurmScript(args):
     with open(FILE_SLURM_EXEC, "w") as fp:
         # Fixed initial content
         fp.write("#!/bin/bash\n")
@@ -210,7 +224,7 @@ def generateExecutionSlurmScript(args, batchNo):
 
         runCom = "python run_monte_carlo.py --exec_type execution "
         runCom += f"--id {args.id} "
-        runCom += f"--batch_no {batchNo} "
+        runCom += f"--batch_no {args.batch_no} "
         runCom += f"--n_cores {args.n_cores} "
         runCom += f"--exec_path {args.exec_path} "
         runCom += f"--i_array $SLURM_ARRAY_TASK_ID "
@@ -219,7 +233,7 @@ def generateExecutionSlurmScript(args, batchNo):
 
         fp.write(runCom)
 
-def generateEvaluationSlurmScript(args, batchNo, execJobId):
+def generateEvaluationSlurmScript(args, execJobId):
     with open(FILE_SLURM_EVAL, "w") as fp:
         # Fixed initial content
         fp.write("#!/bin/bash\n")
@@ -238,7 +252,7 @@ def generateEvaluationSlurmScript(args, batchNo, execJobId):
 
         runCom = "python run_monte_carlo.py --exec_type evaluation "
         runCom += f"--id {args.id} "
-        runCom += f"--batch_no {batchNo} "
+        runCom += f"--batch_no {args.batch_no} "
         runCom += f"--batch_size {args.batch_size} "
         runCom += f"--n_cores {args.n_cores} "
         runCom += f"--exec_path {args.exec_path} "
@@ -248,16 +262,22 @@ def generateEvaluationSlurmScript(args, batchNo, execJobId):
         fp.write(runCom)
 
 def sampleInputsFileName(id, batchNo) -> str:
-    return f"{FILE_IN}{id}_{batchNo:05d}{FILE_IN_EXT}"
+    return f"{FILE_RAW_IN}{id}_{batchNo:05d}{FILE_RAW_IN_EXT}"
 
 def sampleOutputsFileName(id, batchNo) -> str:
-    return f"{FILE_OUT}{id}_{batchNo:05d}{FILE_OUT_EXT}"
+    return f"{FILE_RAW_OUT}{id}_{batchNo:05d}{FILE_RAW_OUT_EXT}"
 
 def singleInputFileName(id, batchIndex) -> str:
-    return f"{FILE_IN_SINGLE}{id}_{batchIndex:05d}{FILE_SINGLE_EXT}"
+    return f"{FILE_SINGLE_IN}{id}_{batchIndex:05d}{FILE_SINGLE_EXT}"
 
 def singleOutputFileName(id, batchIndex) -> str:
-    return f"{FILE_OUT_SINGLE}{id}_{batchIndex:05d}{FILE_SINGLE_EXT}"
+    return f"{FILE_SINGLE_OUT}{id}_{batchIndex:05d}{FILE_SINGLE_EXT}"
+
+def failuresFileName(id) -> str:
+    return f"{FILE_FAIL}{id}{FILE_FAIL_EXT}"
+
+def failuresBatchesFileName(id) -> str:
+    return f"{FILE_FAIL_BATCHES}{id}{FILE_FAIL_EXT}"
 
 def runExecution(argv):
     print("Running execution", flush=True)
@@ -303,7 +323,7 @@ def runEvaluation(argv):
     args = parser.parse_args()
 
     # Read in output files and combine
-    singleOutputFiles = [f for f in Path.cwd().iterdir() if f.is_file() and f"{FILE_OUT_SINGLE}{args.id}" in f.name]
+    singleOutputFiles = [f for f in Path.cwd().iterdir() if f.is_file() and f"{FILE_SINGLE_OUT}{args.id}" in f.name]
     if len(singleOutputFiles) != args.batch_size:
         raise ValueError("Some execution jobs failed")
     
@@ -315,15 +335,115 @@ def runEvaluation(argv):
     combinedData = pd.DataFrame.from_dict(allData, orient='index')
     combinedData.to_csv(sampleOutputsFileName(args.id, args.batch_no))
 
-    # Compute failures
+    # Delete individual output files
+    for f in singleOutputFiles:
+        f.unlink()
+
+    print("Combined all model run outputs", flush=True)
+
+    # Compute and save out failures
     combinedData["stress_max_W_cons"] = combinedData["stress_max_W"].copy()
     
-    combinedData.sub(pd.Series(FAILURE_CRIT), axis=0)
-    failures = pd.DataFrame(np.zeros(combinedData.to_numpy().shape))
+    failures = combinedData.sub(pd.Series(FAILURE_CRIT), axis=1)
+    failures = failures.map(lambda x: 1 if x >= 0 else 0)
     
+    probFail = failures.mean(axis=0)
 
-    print(failures)
+    probFail["batch_size"] = args.batch_size
+    probFail.name = args.batch_no
+
+    if Path(failuresBatchesFileName(args.id)).exists():
+        allFail = pd.read_csv(failuresBatchesFileName(args.id), index_col=0)
+        if args.batch_no in allFail.index:
+            allFail.loc[args.batch_no] = probFail
+        else:
+            allFail = pd.concat([allFail,pd.DataFrame(probFail).T])
+    else:
+        allFail = pd.DataFrame(probFail).T
     
+    allFail.to_csv(failuresBatchesFileName(args.id))
+    
+    combFail = allFail.copy()
+    combFail.loc[:, combFail.columns != "batch_size"] = combFail.loc[:, combFail.columns != "batch_size"].multiply(combFail["batch_size"], axis=0)
+    
+    combFail = pd.DataFrame(combFail.sum(axis=0)).T
+    combFail.rename(columns={"batch_size": "run_count"}, inplace=True)
+
+    combFail.loc[:, combFail.columns != "run_count"] = combFail.loc[:, combFail.columns != "run_count"].divide(combFail["run_count"], axis=0)
+    
+    combFail.to_csv(failuresFileName(args.id))
+
+    print("Computed failure probabilities", flush=True)
+
+    # Determine stopping status
+    if combFail["run_count"].iloc[0] >= N_RUN_MAX:
+        print("Hit run count limit")
+    else:
+        if args.batch_no < N_BATCH_MIN-1:
+            print("Insufficient number of batches", flush=True)
+
+            errors = computeErrors(allFail)
+            errors.to_csv("errors.csv")
+
+            generateAndQueueSampling(args)
+        else:
+            errors = computeErrors(allFail)
+            errors.to_csv("errors.csv")
+
+def computeErrors(allFail) -> pd.DataFrame:
+    sigma = allFail.drop(columns="batch_size").std(axis=0)
+    se = sigma / m.sqrt(len(allFail.index))
+    re = se / allFail.drop(columns="batch_size").mean(axis=0)
+
+    tmp = {
+        "standard error": se,
+        "relative error": re
+    }
+    
+    return pd.concat(tmp, axis=1).T
+
+def generateAndQueueSampling(args):
+
+    # Generate slurm file
+    generateSamplingSlurmScript(args)
+
+    # Queue job
+    result = subprocess.run(
+        ["sbatch", FILE_SLURM_SAMP],
+        capture_output=True,
+        text = True,
+        shell = False
+    )
+
+    if result.stderr:
+        raise RuntimeError("Sampling queue submission failed")
+    
+    print("Queued sampling job", flush=True)
+
+def generateSamplingSlurmScript(args):
+    with open(FILE_SLURM_SAMP, "w") as fp:
+        # Fixed initial content
+        fp.write("#!/bin/bash\n")
+        fp.write("#SBATCH --job-name=issf7_samp\n")
+        fp.write("#SBATCH --partition=cpu\n")
+        fp.write("#SBATCH --time=0:10:00\n")
+        fp.write("#SBATCH --nodes=1\n")
+        fp.write("#SBATCH --cpus-per-task=1\n")
+        fp.write("#SBATCH --ntasks-per-node=1\n")
+
+        # Commands
+        fp.write("source .venv/bin/activate\n")
+
+        runCom = "python run_monte_carlo.py --exec_type sampling "
+        runCom += f"--id {args.id} "
+        runCom += f"--batch_no {args.batch_no+1} "
+        runCom += f"--batch_size {args.batch_size} "
+        runCom += f"--n_cores {args.n_cores} "
+        runCom += f"--exec_path {args.exec_path} "
+
+        runCom += "\n"
+
+        fp.write(runCom)
 
 if __name__ == '__main__':
 
