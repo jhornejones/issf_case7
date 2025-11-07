@@ -214,10 +214,10 @@ def generateExecutionSlurmScript(args):
         fp.write("#SBATCH --time=1:00:00\n")
         fp.write("#SBATCH --nodes=1\n")
         fp.write("#SBATCH --cpus-per-task=1\n")
+        fp.write(f"#SBATCH --mem-per-cpu={m.round(350/32)}G\n")
         
         # Args dependent slurm input
         fp.write(f"#SBATCH --ntasks-per-node={args.n_cores}\n")
-        fp.write(f"#SBATCH --mem={m.floor(350.0 * args.n_cores / 32)}G\n")  # This is CUMULUS specific - needs generalising
         fp.write(f"#SBATCH --array=0-{args.batch_size - 1}\n")
 
         # Commands
