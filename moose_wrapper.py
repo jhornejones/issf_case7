@@ -46,9 +46,12 @@ class MooseSim:
         self._outputFile = outputFile
         self._execPath = Path(execPathStr)
         self._simPath = self._directoryGenerator(otherData)
+        
+        print("MOOSE Wrapper: created MOOSE setup", flush=True)
     
     def __del__(self):
         shutil.rmtree(self._simPath)
+        print("MOOSE Wrapper: deleted simulation directory")
             
     def _directoryGenerator(self, otherData) -> Path:
         # Create randomly named folder for current simulation
@@ -85,7 +88,8 @@ class MooseSim:
             for inFile in self._multiAppInputFiles:
                 inputPath = self._simPath / inFile
                 self._updateAMOOSEInputFile(inputPath, params)
-        
+
+        print("MOOSE Wrapper: updated MOOSE input files", flush=True)        
 
     def _updateAMOOSEInputFile(self, inputPath: Path, params: dict):
         with open(inputPath, "r", encoding="utf-8") as in_file:
@@ -153,6 +157,9 @@ class MooseSim:
 
     # Run using subprocess
     def runSimulation(self, nTasks: int):
+        
+        print("MOOSE Wrapper: calling MOOSE", flush=True)
+
         # Write MOOSE args list
         args = [
             'mpirun',
@@ -169,8 +176,10 @@ class MooseSim:
             args,
             shell=False,
             cwd=self._simPath,
-            check=False
+            check=False,
         )
+
+        print("MOOSE Wrapper: MOOSE call complete", flush=True)
 
     def collectSteadyStateOutputs(self) -> dict:
         # Match MOOSE output location

@@ -1,5 +1,6 @@
 
 from pathlib import Path
+import sys
 import argparse
 import json
 import subprocess
@@ -309,15 +310,12 @@ def runExecution(argv):
         singleOutputFileName(args.id, args.i_array)
     ]
 
-    result = subprocess.run(
+    subprocess.run(
         command,
-        capture_output=True,
-        text = True,
         shell = False
     )
 
-    if result.stderr:
-        raise RuntimeError(f"run_issf_7.py error: {result.stderr}")
+    print("Completed execution", flush=True)
 
 def runEvaluation(argv):
     print("Running evaluation", flush=True)

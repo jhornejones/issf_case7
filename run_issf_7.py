@@ -9,6 +9,8 @@ PARAM_OUTPUT_FILE = "results.json"
 OTHER_DATA = ["data"]
 
 if __name__ == '__main__':
+
+    print("run_issf_7 called", flush=True)
     #-------------------------------------------------------------------------
     #------------------------- USER INPUT ------------------------------------
     
@@ -102,3 +104,5 @@ if __name__ == '__main__':
     stress_max_CuCrZr = results['stress_max_CuCrZr']
     strain_max_Cu = results['strain_max_Cu']
     shear_stress_max_W_Cu = results['shear_stress_max_W_Cu']
+
+    print("run_issf_7 completed", flush=True)
