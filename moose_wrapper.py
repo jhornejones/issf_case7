@@ -176,7 +176,7 @@ class MooseSim:
             args,
             shell=False,
             cwd=self._simPath,
-            check=False,
+            check=True,
         )
 
         print("MOOSE Wrapper: MOOSE call complete", flush=True)
