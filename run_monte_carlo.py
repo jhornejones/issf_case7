@@ -344,9 +344,10 @@ def runEvaluation(argv):
     combinedData.to_csv(sampleOutputsFileName(args.id, args.batch_no))
 
     # Delete individual output files
+    singleInputFiles = [f for f in Path.cwd().iterdir() if f.is_file() and f"{FILE_SINGLE_IN}{args.id}" in f.name]
     singleOutputFiles = [f for f in Path.cwd().iterdir() if f.is_file() and f"{FILE_SINGLE_OUT}{args.id}" in f.name]
 
-    for f in singleOutputFiles:
+    for f in singleInputFiles+singleOutputFiles:
         f.unlink()
 
     print("Combined all model run outputs", flush=True)
