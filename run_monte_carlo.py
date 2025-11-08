@@ -25,6 +25,8 @@ FILE_SINGLE_EXT = ".json"
 FILE_FAIL = "failure_"
 FILE_FAIL_BATCHES = "failure_batches_"
 FILE_FAIL_EXT = ".csv"
+FILE_ERRORS = "errors_"
+FILE_ERRORS_EXT = ".csv"
 
 FILE_SLURM_SAMP = "samp.slurm"
 FILE_SLURM_EXEC = "exec.slurm"
@@ -95,6 +97,7 @@ def runSampling(parser):
         files = files + [f for f in Path.cwd().iterdir() if f.is_file() and f"{FILE_SINGLE_OUT}{args.id}" in f.name]
         files = files + [f for f in Path.cwd().iterdir() if f.is_file() and f"{FILE_FAIL}{args.id}" in f.name]
         files = files + [f for f in Path.cwd().iterdir() if f.is_file() and f"{FILE_FAIL_BATCHES}{args.id}" in f.name]
+        files = files + [f for f in Path.cwd().iterdir() if f.is_file() and f"{FILE_ERRORS}{args.id}" in f.name]
 
         for f in files:
             Path.unlink(f)
@@ -281,6 +284,9 @@ def failuresFileName(id) -> str:
 def failuresBatchesFileName(id) -> str:
     return f"{FILE_FAIL_BATCHES}{id}{FILE_FAIL_EXT}"
 
+def errorsFileName(id) -> str:
+    return f"{FILE_ERRORS}{id}{FILE_ERRORS_EXT}"
+
 def runExecution(argv):
     print("Running execution", flush=True)
 
@@ -394,12 +400,12 @@ def runEvaluation(argv):
             print("Insufficient number of batches", flush=True)
 
             errors = computeErrors(allFail)
-            errors.to_csv("errors.csv")
+            errors.to_csv(errorsFileName(args.id))
 
             generateAndQueueSampling(args)
         else:
             errors = computeErrors(allFail)
-            errors.to_csv("errors.csv")
+            errors.to_csv(errorsFileName(args.id))
 
 def computeErrors(allFail) -> pd.DataFrame:
     sigma = allFail.drop(columns="batch_size").std(axis=0)
