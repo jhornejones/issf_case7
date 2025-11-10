@@ -12,4 +12,5 @@ failure_*
 exec.slurm
 eval.slurm
 samp.slurm
-errors.csv
+errors_*
+removeFailed.sh
