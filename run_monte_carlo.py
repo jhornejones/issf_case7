@@ -24,6 +24,7 @@ FILE_SINGLE_OUT = "output_single_"
 FILE_SINGLE_EXT = ".json"
 FILE_FAIL = "failure_"
 FILE_FAIL_BATCHES = "failure_batches_"
+FILE_FAIL_CONV = "failure_convergence_"
 FILE_FAIL_EXT = ".csv"
 FILE_ERRORS = "errors_"
 FILE_ERRORS_EXT = ".csv"
@@ -218,7 +219,7 @@ def generateExecutionSlurmScript(args):
         fp.write("#SBATCH --time=1:00:00\n")
         fp.write("#SBATCH --nodes=1\n")
         fp.write("#SBATCH --cpus-per-task=1\n")
-        fp.write(f"#SBATCH --mem-per-cpu=3G\n")
+        fp.write(f"#SBATCH --mem-per-cpu=4G\n")
         
         # Args dependent slurm input
         fp.write(f"#SBATCH --ntasks-per-node={args.n_cores}\n")
@@ -283,6 +284,9 @@ def failuresFileName(id) -> str:
 
 def failuresBatchesFileName(id) -> str:
     return f"{FILE_FAIL_BATCHES}{id}{FILE_FAIL_EXT}"
+
+def failuresConvergenceFileName(id) -> str:
+    return f"{FILE_FAIL_CONV}{id}{FILE_FAIL_EXT}"
 
 def errorsFileName(id) -> str:
     return f"{FILE_ERRORS}{id}{FILE_ERRORS_EXT}"
@@ -369,6 +373,7 @@ def runEvaluation(argv):
     probFail["batch_size"] = len(combinedData.index)
     probFail.name = args.batch_no
 
+    ## Append batch failures to file
     if Path(failuresBatchesFileName(args.id)).exists():
         allFail = pd.read_csv(failuresBatchesFileName(args.id), index_col=0)
         if args.batch_no in allFail.index:
@@ -380,6 +385,7 @@ def runEvaluation(argv):
     
     allFail.to_csv(failuresBatchesFileName(args.id))
     
+    ## Compute overall failure and save
     combFail = allFail.copy()
     combFail.loc[:, combFail.columns != "batch_size"] = combFail.loc[:, combFail.columns != "batch_size"].multiply(combFail["batch_size"], axis=0)
     
@@ -390,6 +396,17 @@ def runEvaluation(argv):
     
     combFail.to_csv(failuresFileName(args.id))
 
+    if Path(failuresConvergenceFileName(args.id)).exists():
+        convFail = pd.read_csv(failuresConvergenceFileName(args.id), index_col=0)
+        if args.batch_no in convFail.index:
+            convFail.loc[args.batch_no] = combFail.iloc[0]
+        else:
+            convFail = pd.concat([convFail,combFail])
+    else:
+        convFail = combFail
+    
+    convFail.to_csv(failuresConvergenceFileName(args.id))
+    
     print("Computed failure probabilities", flush=True)
 
     # Determine stopping status
