@@ -9,6 +9,10 @@ MOOSE_COMMENT = '#'
 PARAM_START = "*_*START*_*"
 PARAM_END = "*_*END*_*"
 
+SUCCESS = 0
+FAIL_MOOSE = 1
+FAIL_SUBPROCESS = 2
+
 class MooseSim:
     _inputFile = None
     _multiAppInputFiles = None
@@ -156,7 +160,7 @@ class MooseSim:
         return (variable, value, comment)
 
     # Run using subprocess
-    def runSimulation(self, nTasks: int):
+    def runSimulation(self, nTasks: int) -> int:
         
         print("MOOSE Wrapper: calling MOOSE", flush=True)
 
@@ -172,14 +176,24 @@ class MooseSim:
         ]
 
         # Run simulation
-        subprocess.run(
-            args,
-            shell=False,
-            cwd=self._simPath,
-            check=True,
-        )
+        try:
+            result = subprocess.run(
+                args,
+                shell=False,
+                cwd=self._simPath,
+                check=True,
+            )
+
+            if result.returncode != 0:
+                print(f"MOOSE Wrapper: MOOSE error code {result.returncode}", flush=True)
+                return FAIL_MOOSE
+
+        except ChildProcessError:
+            print("MOOSE Wrapper: MOOSE call failed with no return", flush=True)
+            return FAIL_SUBPROCESS
 
         print("MOOSE Wrapper: MOOSE call complete", flush=True)
+        return SUCCESS
 
     def collectSteadyStateOutputs(self) -> dict:
         # Match MOOSE output location

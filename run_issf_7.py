@@ -92,17 +92,19 @@ if __name__ == '__main__':
     )
     
     sim.updateInputFile(params)
-    sim.runSimulation(nTasks) 
-    results = sim.collectSteadyStateOutputs()
-    
-    # Make results available
-    with open(Path(outputJsonPathStr), 'w') as fp:
-        json.dump(results, fp)
-    
-    temp_max_W = results['temp_max_W']
-    stress_max_W = results['stress_max_W']
-    stress_max_CuCrZr = results['stress_max_CuCrZr']
-    strain_max_Cu = results['strain_max_Cu']
-    shear_stress_max_W_Cu = results['shear_stress_max_W_Cu']
+    runCode = sim.runSimulation(nTasks)
 
-    print("run_issf_7 completed", flush=True)
+    if not runCode:
+        results = sim.collectSteadyStateOutputs()
+        
+        # Make results available
+        with open(Path(outputJsonPathStr), 'w') as fp:
+            json.dump(results, fp)
+        
+        temp_max_W = results['temp_max_W']
+        stress_max_W = results['stress_max_W']
+        stress_max_CuCrZr = results['stress_max_CuCrZr']
+        strain_max_Cu = results['strain_max_Cu']
+        shear_stress_max_W_Cu = results['shear_stress_max_W_Cu']
+
+        print("run_issf_7 completed", flush=True)
