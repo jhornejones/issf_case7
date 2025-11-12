@@ -453,6 +453,9 @@ def generateFinalSamplesFiles(args):
     inputFiles = [f for f in Path.cwd().iterdir() if f.is_file() and f"{FILE_RAW_IN}{args.id}" in f.name]
     outputFiles = [f for f in Path.cwd().iterdir() if f.is_file() and f"{FILE_RAW_OUT}{args.id}" in f.name]
 
+    inputFiles.sort()
+    outputFiles.sort()
+
     if len(inputFiles) != len(outputFiles):
         raise FileExistsError("Input and output files not matching")
     
@@ -480,8 +483,8 @@ def generateFinalSamplesFiles(args):
     allDataIn = pd.concat(allIn, ignore_index=True)
     allDataOut = pd.concat(allOut, ignore_index=True)
 
-    allDataIn.to_csv(allInputsFileName(args))
-    allDataOut.to_csv(allOutputsFileName(args))
+    allDataIn.to_csv(allInputsFileName(args.id))
+    allDataOut.to_csv(allOutputsFileName(args.id))
 
     print("Generated final samples files", flush=True)
 
