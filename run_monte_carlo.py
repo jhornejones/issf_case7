@@ -46,7 +46,7 @@ FAILURE_CRIT = {
     "stress_max_W_cons": 300E6
 }
 
-N_BATCH_MIN = 10    # Minimum number of batches
+N_BATCH_MIN = 30    # Minimum number of batches
 N_RUN_MAX = 1E7     # Maximum number of model runs
 SE_TOL = 1E-6
 
@@ -223,7 +223,7 @@ def generateExecutionSlurmScript(args):
         fp.write("#SBATCH --time=1:00:00\n")
         fp.write("#SBATCH --nodes=1\n")
         fp.write("#SBATCH --cpus-per-task=1\n")
-        fp.write(f"#SBATCH --mem-per-cpu=10G\n")
+        fp.write(f"#SBATCH --mem-per-cpu=15G\n")
         fp.write(f"#SBATCH --exclusive=user\n")
         
         # Args dependent slurm input
