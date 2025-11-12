@@ -223,7 +223,8 @@ def generateExecutionSlurmScript(args):
         fp.write("#SBATCH --time=1:00:00\n")
         fp.write("#SBATCH --nodes=1\n")
         fp.write("#SBATCH --cpus-per-task=1\n")
-        fp.write(f"#SBATCH --mem-per-cpu=4G\n")
+        fp.write(f"#SBATCH --mem-per-cpu=10G\n")
+        fp.write(f"#SBATCH --exclusive=user\n")
         
         # Args dependent slurm input
         fp.write(f"#SBATCH --ntasks-per-node={args.n_cores}\n")
