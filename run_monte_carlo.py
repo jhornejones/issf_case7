@@ -16,8 +16,10 @@ ARG_EXEC = "execution"
 ARG_EVAL = "evaluation"
 
 FILE_RAW_IN = "input_samples_"
+FILE_RAW_IN_FINAL = "input_all_samples_"
 FILE_RAW_IN_EXT = ".csv"
 FILE_RAW_OUT = "output_samples_"
+FILE_RAW_OUT_FINAL = "output_all_samples_"
 FILE_RAW_OUT_EXT = ".csv"
 FILE_SINGLE_IN = "input_single_"
 FILE_SINGLE_OUT = "output_single_"
@@ -98,7 +100,9 @@ def runSampling(parser):
         files = files + [f for f in Path.cwd().iterdir() if f.is_file() and f"{FILE_SINGLE_OUT}{args.id}" in f.name]
         files = files + [f for f in Path.cwd().iterdir() if f.is_file() and f"{FILE_FAIL}{args.id}" in f.name]
         files = files + [f for f in Path.cwd().iterdir() if f.is_file() and f"{FILE_FAIL_BATCHES}{args.id}" in f.name]
-        files = files + [f for f in Path.cwd().iterdir() if f.is_file() and f"{FILE_ERRORS}{args.id}" in f.name]
+        files = files + [f for f in Path.cwd().iterdir() if f.is_file() and f"{FILE_FAIL_CONV}{args.id}" in f.name]
+        files = files + [f for f in Path.cwd().iterdir() if f.is_file() and f"{FILE_RAW_IN_FINAL}{args.id}" in f.name]
+        files = files + [f for f in Path.cwd().iterdir() if f.is_file() and f"{FILE_RAW_OUT_FINAL}{args.id}" in f.name]
 
         for f in files:
             Path.unlink(f)
@@ -273,6 +277,12 @@ def sampleInputsFileName(id, batchNo) -> str:
 def sampleOutputsFileName(id, batchNo) -> str:
     return f"{FILE_RAW_OUT}{id}_{batchNo:05d}{FILE_RAW_OUT_EXT}"
 
+def allInputsFileName(id) -> str:
+    return f"{FILE_RAW_IN_FINAL}{id}{FILE_RAW_IN_EXT}"
+
+def allOutputsFileName(id) -> str:
+    return f"{FILE_RAW_OUT_FINAL}{id}{FILE_RAW_OUT_EXT}"
+
 def singleInputFileName(id, batchIndex) -> str:
     return f"{FILE_SINGLE_IN}{id}_{batchIndex:05d}{FILE_SINGLE_EXT}"
 
@@ -409,6 +419,8 @@ def runEvaluation(argv):
     
     print("Computed failure probabilities", flush=True)
 
+    generateFinalSamplesFiles(args)
+
     # Determine stopping status
     if combFail["run_count"].iloc[0] >= N_RUN_MAX:
         print("Hit run count limit")
@@ -435,6 +447,42 @@ def computeErrors(allFail) -> pd.DataFrame:
     }
     
     return pd.concat(tmp, axis=1).T
+
+def generateFinalSamplesFiles(args):
+    inputFiles = [f for f in Path.cwd().iterdir() if f.is_file() and f"{FILE_RAW_IN}{args.id}" in f.name]
+    outputFiles = [f for f in Path.cwd().iterdir() if f.is_file() and f"{FILE_RAW_OUT}{args.id}" in f.name]
+
+    if len(inputFiles) != len(outputFiles):
+        raise FileExistsError("Input and output files not matching")
+    
+    allIn = []
+    allOut = []
+
+    for inp, out in zip(inputFiles, outputFiles):
+        inNum = int(inp.stem.split("_")[-1])
+        outNum = int(out.stem.split("_")[-1])
+
+        if inNum != outNum:
+            raise FileExistsError("Input and output files not matching")
+        
+        dataIn = pd.read_csv(inp, index_col=0)
+        dataOut = pd.read_csv(out, index_col=0)
+
+        dataIn = dataIn.loc[dataOut.index]      # Remove samples where simulation failed
+
+        dataIn.reset_index(drop=True, inplace=True)
+        dataOut.reset_index(drop=True, inplace=True)
+
+        allIn.append(dataIn)
+        allOut.append(dataOut)
+
+    allDataIn = pd.concat(allIn, ignore_index=True)
+    allDataOut = pd.concat(allOut, ignore_index=True)
+
+    allDataIn.to_csv(allInputsFileName(args))
+    allDataOut.to_csv(allOutputsFileName(args))
+
+    print("Generated final samples files", flush=True)
 
 def generateAndQueueSampling(args):
 
