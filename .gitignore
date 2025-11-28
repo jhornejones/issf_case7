@@ -8,9 +8,12 @@ doe.csv
 doeResults.csv
 input_samples_*
 output_samples_*
+input_all_samples_*
+output_all_samples_*
 failure_*
 exec.slurm
 eval.slurm
 samp.slurm
 errors_*
 removeFailed.sh
+*.out
